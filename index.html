@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261010g">
+<link rel="stylesheet" href="assets/site.css?v=20261011a">
 </head>
 <body>
 <div class="wrap">
@@ -51,6 +51,24 @@
     </div>
   </section>
 
+  <section class="game" id="game" aria-label="Innvadex game">
+    <div class="ledger-head">
+      <h2>Innvadex</h2>
+      <span class="game-score"><span id="gamePoints" class="status">0 points</span> <span id="gameProgress" class="status"></span></span>
+    </div>
+    <div class="game-bar">
+      <div class="game-tabs" role="tablist">
+        <button class="tab" type="button" role="tab" data-tab="dex" aria-selected="true">My Innvadex</button>
+        <button class="tab" type="button" role="tab" data-tab="badges" aria-selected="false">Badges</button>
+        <button class="tab" type="button" role="tab" data-tab="learn" aria-selected="false">Learn about species</button>
+      </div>
+      <button id="howToPlay" class="btn" type="button">How to play</button>
+    </div>
+    <div id="tab-dex" role="tabpanel"><div id="dexGrid" class="dex-grid"></div></div>
+    <div id="tab-badges" role="tabpanel" hidden><div id="badgeList" class="badge-list"></div></div>
+    <div id="tab-learn" role="tabpanel" hidden><div id="learnList" class="learn-list"></div></div>
+  </section>
+
   <details class="reporting" id="reporting">
     <summary>Reporting · <span id="reportState" class="state">checking…</span></summary>
     <p>When a photo shows an invasive species, a report with a reduced copy of the photo is sent automatically. Nothing to set up. Reports that can't be sent right away (no internet) wait on this device and go out later.</p>
@@ -85,11 +103,16 @@
   <div id="viewerCaption" class="caption"></div>
 </div>
 
+<div id="gamePopup" class="game-popup" role="dialog" aria-modal="true" aria-label="Innvadex" hidden>
+  <div id="gamePopupBox" class="game-popup-box"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.wasm.min.js"></script>
 <script src="assets/reports.js?v=20261010g"></script>
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261010g"></script>
+<script src="assets/app.js?v=20261011a"></script>
+<script src="assets/game.js?v=20261011a"></script>
 </body>
 </html>

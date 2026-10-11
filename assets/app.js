@@ -386,7 +386,10 @@ function classify(file) {
         // Photos from the in-page camera come straight from the camera; uploads are checked for AI labels
         const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file).catch(() => ({ verdict: "unknown", reasons: [] }));
         if (ai.verdict === "ai") blockReport(card, ai);
-        else fileReport(bmp, top3[0].species, top3[0].confidence, top3, card);
+        else {
+          fileReport(bmp, top3[0].species, top3[0].confidence, top3, card);
+          window.Innvadex?.encounter(top3[0].species, card.querySelector("img").src);   // the game (assets/game.js)
+        }
       }
       bmp.close?.();
       setStatus(readyText(), "ready");
