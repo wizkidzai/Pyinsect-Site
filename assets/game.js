@@ -101,11 +101,8 @@ const BADGES = [
   { id: "protector", emoji: "🛡️", name: "Nature Protector",  desc: "Find 5 native bugs.",              earned: g => g.protector >= 5 },
   { id: "trainer",   emoji: "⚔️", name: "Battle Buddy",      desc: "Win a battle against a trainer.",  earned: g => g.wins >= 1 },
   { id: "daily",     emoji: "📅", name: "Challenge Champ",   desc: "Finish a daily challenge.",        earned: g => g.dailyDone >= 1 },
-  // One badge per forest gym (see GYMS below)
-  { id: "gym-forestpark", emoji: "🌲", name: "Forest Park Badge",  desc: "Beat the Forest Park gym.",  earned: g => g.gyms.includes("forestpark") },
-  { id: "gym-tillamook",  emoji: "🌧️", name: "Tillamook Badge",    desc: "Beat the Tillamook gym.",    earned: g => g.gyms.includes("tillamook") },
-  { id: "gym-willamette", emoji: "🍄", name: "Willamette Badge",   desc: "Beat the Willamette gym.",   earned: g => g.gyms.includes("willamette") },
-  { id: "gym-mthood",     emoji: "🏔️", name: "Mount Hood Badge",   desc: "Beat the Mount Hood gym.",   earned: g => g.gyms.includes("mthood") },
+  { id: "streak3",   emoji: "🔥", name: "On a Roll",         desc: "Play 3 days in a row.",            earned: g => g.streak.count >= 3 },
+  { id: "streak7",   emoji: "📆", name: "Week Warrior",      desc: "Play 7 days in a row.",            earned: g => g.streak.count >= 7 },
 ];
 
 const MINIGAME_TAPS = 3, MINIGAME_SECONDS = 10;
@@ -155,21 +152,64 @@ const TRAINERS = [
     say: { hi: "I teach about invasive species. This is my final exam. Are you ready?", next: "Excellent. Now, try this one!", lose: "You pass with flying colors!", win: "Study the Learn about species page and try again!" } },
 ];
 
-// Gyms are named after real Oregon forests. Each one opens when your Innvadex has enough kinds of bugs.
+// Gyms are named after real Oregon places. You beat them in order: each one opens when your
+// Innvadex has `unlock` kinds of bugs AND you've beaten the gym before it. Later gyms are harder:
+//   level   = how smart the leader is (see foeMove)
+//   bugLevel = how strong the leader's bugs are (yours go up to Lv 3, the Champion's are Lv 4)
+//   heals   = how many times the leader can heal a badly hurt bug
 const GYMS = [
-  { id: "forestpark", emoji: "🌲", name: "Forest Park Gym",        leader: "Ranger Fern",   level: 1, unlock: 1, reward: 50,
-    team: ["exomala_orientalis", "anisandrus_dispar"],
+  { id: "forestpark", emoji: "🌲", name: "Forest Park Gym", badge: "Forest Park Badge", leader: "Ranger Fern", face: "👩‍🌾",
+    level: 1, bugLevel: 1, heals: 0, unlock: 1, reward: 50,
+    team: ["exomala_orientalis", "anisandrus_dispar", "pieris_rapae"],
+    story: "Forest Park is one of the biggest city forests in the country. Invasive beetles are sneaking in!",
     say: { hi: "Welcome to Forest Park! Let's see if you can protect it.", next: "The forest is counting on me!", lose: "You've earned the Forest Park Badge!", win: "Come back when you're stronger!" } },
-  { id: "tillamook",  emoji: "🌧️", name: "Tillamook Forest Gym",   leader: "Ranger Moss",   level: 2, unlock: 3, reward: 50,
+  { id: "siuslaw", emoji: "🌊", name: "Siuslaw Coast Gym", badge: "Siuslaw Badge", leader: "Ranger Tide", face: "🏄",
+    level: 2, bugLevel: 1, heals: 0, unlock: 2, reward: 60,
+    team: ["linepithema_humile", "harmonia_axyridis", "pieris_rapae", "halyomorpha_halys"],
+    story: "The Siuslaw National Forest goes all the way to the ocean, with foggy forests and giant sand dunes.",
+    say: { hi: "Surf's up! Let's see if you can ride this wave.", next: "Here comes another wave!", lose: "Totally awesome! You've earned the Siuslaw Badge!", win: "Wiped out! Try again, dude!" } },
+  { id: "tillamook", emoji: "🌧️", name: "Tillamook Forest Gym", badge: "Tillamook Badge", leader: "Ranger Moss", face: "🧔",
+    level: 2, bugLevel: 2, heals: 0, unlock: 3, reward: 70,
     team: ["macrodactylus_subspinosus", "solenopsis_invicta", "adelges_piceae"],
+    story: "The Tillamook State Forest grew back after giant fires long ago. Let's keep pests out of it!",
     say: { hi: "Rain or shine, I'm ready to battle!", next: "A little rain won't stop me!", lose: "You've earned the Tillamook Badge!", win: "The rain is on my side today!" } },
-  { id: "willamette", emoji: "🍄", name: "Willamette Forest Gym",  leader: "Ranger Cedar",  level: 3, unlock: 5, reward: 75,
+  { id: "gorge", emoji: "💦", name: "Columbia Gorge Gym", badge: "Gorge Badge", leader: "Ranger Falls", face: "🚣",
+    level: 2, bugLevel: 2, heals: 1, unlock: 3, reward: 80,
+    team: ["halyomorpha_halys", "polistes_dominula", "popillia_japonica", "macrodactylus_subspinosus"],
+    story: "The Columbia River Gorge has more than 90 waterfalls on the Oregon side. Bugs ride in on boats and trucks here!",
+    say: { hi: "My bugs are as strong as a waterfall. Ready to get splashed?", next: "Keep paddling!", lose: "What a ride! You've earned the Gorge Badge!", win: "Swept away! Try again!" } },
+  { id: "willamette", emoji: "🍄", name: "Willamette Forest Gym", badge: "Willamette Badge", leader: "Ranger Cedar", face: "👩‍🦰",
+    level: 3, bugLevel: 2, heals: 1, unlock: 4, reward: 90,
     team: ["xyleborus_monographus", "lymantria_dispar", "coptotermes_formosanus", "popillia_japonica"],
+    story: "The Willamette National Forest has some of the oldest, tallest trees in Oregon. They need protecting!",
     say: { hi: "These are the bugs that worry us most in the Willamette. Show me what you know!", next: "My forest won't give up!", lose: "You've earned the Willamette Badge!", win: "Train a bit more, then come back!" } },
-  { id: "mthood",     emoji: "🏔️", name: "Mount Hood Forest Gym",  leader: "Ranger Summit", level: 3, unlock: 8, reward: 100,
-    team: ["agrilus_planipennis", "anoplophora_glabripennis", "lycorma_delicatula", "vespa_mandarinia"],
+  { id: "deschutes", emoji: "🌋", name: "Deschutes Forest Gym", badge: "Deschutes Badge", leader: "Ranger Ember", face: "👩‍🚒",
+    level: 3, bugLevel: 3, heals: 1, unlock: 5, reward: 110,
+    team: ["lymantria_dispar", "coptotermes_formosanus", "solenopsis_invicta", "adelges_piceae", "xyleborus_monographus"],
+    story: "The Deschutes National Forest has huge ponderosa pines growing next to old lava flows.",
+    say: { hi: "My bugs are hot as lava. Think you can handle the heat?", next: "Things are heating up!", lose: "You put out my fire! You've earned the Deschutes Badge!", win: "Too hot to handle! Cool off and try again." } },
+  { id: "craterlake", emoji: "💧", name: "Crater Lake Gym", badge: "Crater Lake Badge", leader: "Ranger Blue", face: "🤿",
+    level: 3, bugLevel: 3, heals: 1, unlock: 6, reward: 130,
+    team: ["anoplophora_glabripennis", "lycorma_delicatula", "popillia_japonica", "lymantria_dispar", "solenopsis_invicta"],
+    story: "Crater Lake is the deepest lake in the United States. It sits inside an old volcano!",
+    say: { hi: "My strategy is as deep as Crater Lake. Dive in!", next: "We're going deeper!", lose: "You've earned the Crater Lake Badge!", win: "You sank! Come back up and try again." } },
+  { id: "mthood", emoji: "🏔️", name: "Mount Hood Forest Gym", badge: "Mount Hood Badge", leader: "Ranger Summit", face: "🧗",
+    level: 3, bugLevel: 3, heals: 2, unlock: 6, reward: 150,
+    team: ["agrilus_planipennis", "anoplophora_glabripennis", "lycorma_delicatula", "vespa_mandarinia", "coptotermes_formosanus"],
+    story: "Mount Hood is Oregon's tallest mountain. Only the best Bug Rangers make it this far!",
     say: { hi: "You made it to the top! My Legendary bugs are the toughest in Oregon.", next: "A Legendary bug never gives up!", lose: "Amazing! You've earned the Mount Hood Badge!", win: "The mountain wins this time. Keep training!" } },
+  { id: "champion", emoji: "🏆", name: "Oregon Champion", badge: "Champion Trophy", leader: "Champion Juniper", face: "🦸", champion: true,
+    level: 3, bugLevel: 4, heals: 2, unlock: 6, reward: 250,
+    team: ["agrilus_planipennis", "anoplophora_glabripennis", "lycorma_delicatula", "vespa_mandarinia", "lymantria_dispar", "popillia_japonica"],
+    story: "I'm Juniper, the Oregon Champion. I've protected every forest in this state, from the coast to the mountains.",
+    say: { hi: "You beat all 8 gyms. Now face me, with my Level 4 bugs! This is the final battle!", next: "A Champion never gives up!", lose: "Incredible! You are the new Oregon Champion!", win: "Not yet! Train hard and come back, Bug Ranger." } },
 ];
+// One badge per gym
+BADGES.push(...GYMS.map(gym => ({ id: `gym-${gym.id}`, emoji: gym.emoji, name: gym.badge, desc: `Beat the ${gym.name}.`, earned: g => g.gyms.includes(gym.id) })));
+const gymBefore = gym => GYMS[GYMS.indexOf(gym) - 1];
+const gymOpen = (g, gym) => kindsCaught(g) >= gym.unlock && (!gymBefore(gym) || g.gyms.includes(gymBefore(gym).id));
+// A gym's strongest bug, for its cutscene
+const signatureBug = gym => [...gym.team].sort((a, b) => Object.keys(RARITY).indexOf(SPECIES_FACTS[b].rarity) - Object.keys(RARITY).indexOf(SPECIES_FACTS[a].rarity))[0];
 
 // ---------- version 3: evolution, ranks, shop, quiz, map, sounds ----------
 
@@ -198,12 +238,92 @@ const QUIZ_POINTS = 5, QUIZ_DAILY_MAX = 5;
 // The catch map: spots are rounded to 3 decimal places (about a city block) and saved only here
 const MAP_DECIMALS = 3;
 
+// ---------- version 4: cutscenes, trainer card, streaks ----------
+
+// Avatars for the trainer card. Nicknames are short and saved only on this device.
+const AVATARS = ["🧢", "🦊", "🐸", "🦉", "🐢", "🦄", "🐼", "🤖"];
+const NAME_MAX = 16;
+
+// Play on days in a row for bonus points (5 points per day in the streak, up to 25)
+const STREAK_BONUS = 5, STREAK_MAX = 5;
+
+// Cutscene backgrounds: a sky color and a row of emoji along the ground
+const SCENES = {
+  lab:        { bg: "linear-gradient(180deg, #dfe9f3 0%, #c3d3e6 100%)", decor: "🔬 📚 🧪 🗺️ 🔭" },
+  forest:     { bg: "linear-gradient(180deg, #bfe3c8 0%, #6fae7e 100%)", decor: "🌲 🌳 🌲 🌲 🌳 🌲" },
+  danger:     { bg: "linear-gradient(180deg, #f6d2b8 0%, #d9826b 100%)", decor: "🪵 🌳 🪲 🌲 🐛 🌳" },
+  forestpark: { bg: "linear-gradient(180deg, #cfe8d4 0%, #5f9e6e 100%)", decor: "🌲 🥾 🌲 🌳 🦌 🌲" },
+  tillamook:  { bg: "linear-gradient(180deg, #b9c6cf 0%, #6d8a7a 100%)", decor: "🌧️ 🌲 🌧️ 🌲 🍄 🌲" },
+  willamette: { bg: "linear-gradient(180deg, #d8e6c5 0%, #557a46 100%)", decor: "🍄 🌲 🌲 🦉 🌲 🍄" },
+  mthood:     { bg: "linear-gradient(180deg, #d6e4f5 0%, #8aa9c9 100%)", decor: "🏔️ 🌲 ❄️ 🌲 🏔️" },
+  victory:    { bg: "linear-gradient(180deg, #fff3c4 0%, #f2c94c 100%)", decor: "✨ 🎉 🏅 🎉 ✨" },
+  siuslaw:    { bg: "linear-gradient(180deg, #d5eef5 0%, #e9d8a6 100%)", decor: "🌊 🏖️ 🌲 🌊 🦀 🌲" },
+  gorge:      { bg: "linear-gradient(180deg, #cde6f0 0%, #4f8a8b 100%)", decor: "💦 🌲 🛶 🌲 💦 🐟" },
+  deschutes:  { bg: "linear-gradient(180deg, #f7d9b5 0%, #a0522d 100%)", decor: "🌋 🌲 🪨 🌲 🔥 🌲" },
+  craterlake: { bg: "linear-gradient(180deg, #a9cdf0 0%, #1f4e8c 100%)", decor: "💧 🌲 🏝️ 🌲 💧" },
+  champion:   { bg: "linear-gradient(180deg, #e3d4f7 0%, #6b4bb3 100%)", decor: "🏆 🌲 🌊 🌋 🏔️ 🏆" },
+};
+
+const HAZEL = { who: "👩‍🏫", name: "Professor Hazel" };
+const INTRO = [
+  { scene: "lab",    ...HAZEL, text: "Hi there! I'm Professor Hazel, and I study insects here in Oregon." },
+  { scene: "forest", ...HAZEL, text: "Oregon's forests are full of amazing plants, animals, and insects that belong here. We call them native species." },
+  { scene: "danger", who: "🪲", name: "Uh oh!", text: "But some bugs came from far away. They're called invasive species. Here, they have no natural enemies to keep them in check." },
+  { scene: "danger", who: "🚚", name: "How do they get here?", text: "They hitchhike! They hide in firewood, shipping crates, plants, and even on cars." },
+  { scene: "danger", who: "🌳", name: "What happens next?", text: "They munch on trees, crops, and gardens, and push out the native bugs that birds and other animals need." },
+  { scene: "lab",    ...HAZEL, text: "That's where you come in, {name}! Here's your very own Innvadex. Snap photos of bugs, and if one is invasive, catch it!" },
+  { scene: "forest", ...HAZEL, text: "Every invasive bug you find is reported, so experts know where to set traps. Real photos help real forests!" },
+  { scene: "mthood", ...HAZEL, text: "Battle trainers, beat the 8 forest gyms, and face the Oregon Champion. Good luck, Bug Ranger!" },
+];
+const FIRST_CATCH = [
+  { scene: "victory", ...HAZEL, text: "You caught your first invasive bug, {name}! It's in your Innvadex now." },
+  { scene: "lab",     ...HAZEL, text: "Tap it in your Innvadex to read its fact card. Knowing your bugs makes you a better Bug Ranger!" },
+];
+const FIRST_LEGENDARY = [
+  { scene: "victory", who: "👑", name: "Legendary!", text: "Whoa! You caught a Legendary bug: the {bug}!" },
+  { scene: "lab",     ...HAZEL, text: "Legendary bugs do the most harm. Experts really want to know where they are, so your report is a big deal!" },
+];
+// What Professor Hazel says when your rank goes up
+const RANK_TALK = {
+  Explorer: "You're an Explorer now, {name}! Keep looking under leaves and on tree bark.",
+  Ranger: "Ranger {name}! Rangers know that firewood can carry hidden bugs. Buy it where you burn it!",
+  "Bug Hero": "Bug Hero {name}! Experts can set traps because of reports like yours.",
+  "Forest Guardian": "Forest Guardian {name}! The trees of Oregon thank you.",
+  "Invasive Legend": "Invasive Legend! You reached the top rank. I'm speechless, {name}!",
+};
+const FINALE = [
+  { scene: "champion", who: "🦸", name: "Champion Juniper", text: "Incredible! You beat me, {name}. You are the new Oregon Champion!" },
+  { scene: "victory", ...HAZEL, text: "{name}, I'm so proud of you. You've learned so much about invasive species." },
+  { scene: "forest",  ...HAZEL, text: "Oregon's forests are safer because of Bug Rangers like you." },
+  { scene: "lab",     ...HAZEL, text: "Keep finding invasive bugs in real life. Every report helps protect nature. Thank you, Champion!" },
+];
+
+// Cutscenes wait in line until the pop-ups are closed, then play one after another
+let sceneQueue = [];
+const queueScene = slides => sceneQueue.push(slides);
+async function playQueued() { while (sceneQueue.length) await cutscene(sceneQueue.shift()); }
+
+// Queues a cutscene for each gym that just opened
+function checkUnlocks(g) {
+  for (const gym of GYMS) {
+    if (!gymOpen(g, gym) || g.unlockSeen.includes(gym.id)) continue;
+    g.unlockSeen.push(gym.id);
+    if (g.gyms.includes(gym.id)) continue;   // already beaten, no need to invite you
+    queueScene([{ scene: gym.id, who: gym.face, name: gym.leader, text: gym.champion
+      ? "So you have all 8 gym badges, {name}? I'm Juniper, the Oregon Champion. Come find me in the Battle tab!"
+      : `I'm ${gym.leader}. The ${gym.name} is open now, {name}! Come battle me when you're ready.` }]);
+  }
+}
+
 // ---------- saving ----------
 function loadGame() {
   let g = null;
   try { g = JSON.parse(localStorage.getItem(GAME_KEY)); } catch {}
   g = { points: 0, caught: {}, badges: [], protector: 0, wins: 0, gyms: [], daily: null, dailyDone: 0,
-    items: {}, spots: [], useMap: false, muted: false, quiz: { day: null, right: 0 }, ...(g || {}) };
+    items: {}, spots: [], useMap: false, muted: false, quiz: { day: null, right: 0 },
+    trainer: { name: "", avatar: AVATARS[0] }, streak: { last: null, count: 0 }, unlockSeen: null, ...(g || {}) };
+  // Gyms that were already open before gym cutscenes existed don't need one
+  if (!g.unlockSeen) g.unlockSeen = GYMS.filter(gym => gymOpen(g, gym)).map(gym => gym.id);
   if (g.coins == null) g.coins = g.points;   // games saved before the shop existed
   return g;
 }
@@ -217,7 +337,8 @@ const kindsCaught = g => Object.keys(g.caught).length;
 const caughtRarity = (g, r) => Object.keys(g.caught).some(s => SPECIES_FACTS[s]?.rarity === r);
 // Points count toward your rank, and you get the same number of coins to spend in the shop
 const addPoints = (g, n) => { g.points += n; g.coins += n; };
-const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+const dayKey = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+const todayKey = () => dayKey(0);
 const todaysChallenge = () => {
   const d = new Date();
   return CHALLENGES[Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5) % CHALLENGES.length];
@@ -227,6 +348,16 @@ const todaysChallenge = () => {
 // the badges. Changes the saved game `g` and returns the messages to show.
 function progress(g, ev) {
   const lines = [], rankBefore = g.rankSeen ?? rankOf(g.points - (ev.pts || 0))[2];
+  // The play streak: the first thing you do each day keeps it going (or starts a new one)
+  if (g.streak.last !== todayKey()) {
+    g.streak.count = g.streak.last === dayKey(-1) ? g.streak.count + 1 : 1;
+    g.streak.last = todayKey();
+    if (g.streak.count > 1) {
+      const bonus = STREAK_BONUS * Math.min(g.streak.count, STREAK_MAX);
+      addPoints(g, bonus);
+      lines.push(`🔥 ${g.streak.count}-day streak! +${bonus} points`);
+    }
+  }
   if (g.daily !== todayKey() && todaysChallenge().check(ev)) {
     g.daily = todayKey(); g.dailyDone++; addPoints(g, DAILY_REWARD);
     lines.push(`📅 Daily challenge done! +${DAILY_REWARD} points`);
@@ -236,9 +367,12 @@ function progress(g, ev) {
   g.badges.push(...fresh.map(b => b.id));
   lines.push(...fresh.map(b => `${b.emoji} New badge: ${b.name.replace(/!$/, "")}!`));
   const rank = rankOf(g.points);
-  if (rank[2] !== rankBefore) lines.push(`${rank[1]} Rank up! You're now ${/^[AEIOU]/.test(rank[2]) ? "an" : "a"} ${rank[2]}!`);
+  if (rank[2] !== rankBefore) {
+    lines.push(`${rank[1]} Rank up! You're now ${/^[AEIOU]/.test(rank[2]) ? "an" : "a"} ${rank[2]}!`);
+    if (RANK_TALK[rank[2]]) queueScene([{ scene: "victory", ...HAZEL, text: `${rank[1]} ${RANK_TALK[rank[2]]}` }]);
+  }
   g.rankSeen = rank[2];
-  if (lines.length) sound("badge");
+  if (lines.length) { sound("badge"); confetti(); }
   return lines;
 }
 
@@ -265,12 +399,17 @@ function factCard(species, caughtCount) {
 }
 
 // ---------- the Innvadex panel ----------
+let justCaught = null;   // the bug you just caught gets a little "pop" animation
 function renderGame() {
   const g = loadGame(), all = gameSpecies();
   $("gamePoints").textContent = `${g.points} points`;
   const rank = rankOf(g.points), next = RANKS[RANKS.indexOf(rank) + 1];
   $("gameRank").textContent = `${rank[1]} ${rank[2]}${next ? ` · ${next[0] - g.points} to ${next[2]}` : ""}`;
   $("gameCoins").textContent = `🪙 ${g.coins} coins`;
+  const streakOn = g.streak.count > 0 && [todayKey(), dayKey(-1)].includes(g.streak.last);
+  $("gameStreak").textContent = `🔥 ${g.streak.count}-day streak`;
+  $("gameStreak").hidden = !streakOn;
+  $("trainerBtn").textContent = g.trainer.name ? `${g.trainer.avatar} ${g.trainer.name}` : `${g.trainer.avatar} Make your trainer card`;
   $("muteBtn").textContent = g.muted ? "🔇 Sound off" : "🔊 Sound on";
   $("muteBtn").setAttribute("aria-pressed", g.muted);
   $("gameProgress").textContent = `${kindsCaught(g)} of ${all.length} caught`;
@@ -283,7 +422,7 @@ function renderGame() {
   const dex = $("dexGrid"); dex.innerHTML = "";
   for (const s of all) {
     const n = g.caught[s] || 0;
-    const slot = el("button", "dex-slot" + (n ? " caught" : ""));
+    const slot = el("button", "dex-slot" + (n ? " caught" : "") + (s === justCaught ? " pop" : ""));
     slot.type = "button";
     if (n) {
       slot.append(el("span", "bug-emoji", SPECIES_FACTS[s].emoji), el("strong", null, commonName(s)), rarityTag(s),
@@ -321,18 +460,28 @@ function renderBattles(g) {
   const row = (foe, gym) => {
     const item = el("div", "foe" + (gym && g.gyms.includes(foe.id) ? " beaten" : ""));
     const who = el("div", "foe-who");
-    const level = ["Easy", "Medium", "Hard"][foe.level - 1];
-    who.append(el("strong", null, foe.name), el("span", "muted", `${gym ? `Leader: ${foe.leader} · ` : ""}${foe.team.length} bug${foe.team.length === 1 ? "" : "s"} · ${"⭐".repeat(foe.level)} ${level}`));
-    const locked = kinds < foe.unlock;
-    const b = el("button", "btn" + (locked ? "" : " primary"), locked ? `🔒 Catch ${foe.unlock} kind${foe.unlock === 1 ? "" : "s"}` : gym && g.gyms.includes(foe.id) ? "✅ Battle again" : "Battle!");
+    const level = foe.champion ? "👑 Champion" : `${"⭐".repeat(foe.level)} ${["Easy", "Medium", "Hard"][foe.level - 1]}`;
+    const bugs = `${foe.team.length} bug${foe.team.length === 1 ? "" : "s"}${foe.bugLevel > 1 ? ` (Lv ${foe.bugLevel})` : ""}`;
+    who.append(el("strong", null, foe.name), el("span", "muted", `${gym ? `Leader: ${foe.leader} · ` : ""}${bugs} · ${level}`));
+    const needKinds = kinds < foe.unlock, needGym = gym && !needKinds && !gymOpen(g, foe);
+    const locked = needKinds || needGym;
+    const b = el("button", "btn" + (locked ? "" : " primary"),
+      needKinds ? `🔒 Catch ${foe.unlock} kind${foe.unlock === 1 ? "" : "s"}` : needGym ? `🔒 Beat ${gymBefore(foe).leader} first` : gym && g.gyms.includes(foe.id) ? "✅ Battle again" : "Battle!");
     b.type = "button"; b.disabled = locked;
-    b.onclick = () => battle(foe, gym);
+    b.onclick = () => gym && !g.gyms.includes(foe.id)
+      ? cutscene([
+          { scene: foe.id, who: foe.face, name: foe.leader, text: foe.story },
+          { scene: foe.id, who: SPECIES_FACTS[signatureBug(foe)].emoji, name: `${foe.leader}'s ${commonName(signatureBug(foe))}`,
+            text: `Watch out for my ${commonName(signatureBug(foe))}! ${SPECIES_FACTS[signatureBug(foe)].harm}` },
+          { scene: foe.id, who: foe.face, name: foe.leader, text: foe.say.hi },
+        ]).then(() => battle(foe, gym))
+      : battle(foe, gym);
     item.append(el("span", "bug-emoji", foe.emoji), who, b);
     list.append(item);
   };
   list.append(el("h3", null, "Trainers"));
   TRAINERS.forEach(t => row(t, false));
-  list.append(el("h3", null, "Forest gyms"));
+  list.append(el("h3", null, "Forest gyms (beat them in order)"));
   GYMS.forEach(gym => row(gym, true));
 }
 
@@ -379,10 +528,11 @@ function showInstructions() {
     "Earn badges, like “First Catch!”, as you play.",
     "Find a bug that isn't invasive? Leave it be, and get protector points!",
     "Do the daily challenge for bonus points. There's a new one every day.",
-    "Open “Battle” to battle trainers with your caught bugs. Catch more kinds to open the forest gyms.",
+    "Open “Battle” to battle trainers with your caught bugs. Beat the 8 forest gyms in order, then face the Oregon Champion!",
     "Catch the same bug 3 times and it levels up, which makes it stronger in battles.",
     "Earn coins as you play, and spend them in the “Shop” on items like the Super Net.",
     "Play the “Quiz” for bonus points, and turn on the “Map” to see where you caught your bugs.",
+    "Play on days in a row to build a 🔥 streak for bonus points.",
     "Open “Learn about species” to see every invasive bug, even ones you haven't caught yet.",
   ]) list.append(el("li", null, step));
   const safety = el("div", "safety");
@@ -429,8 +579,17 @@ function minigame(species, photo) {
       if (finished) return;
       finished = true;
       clearInterval(timer); clearInterval(mover);
-      popupDone = () => resolve(won);
-      closePopup();
+      const close = () => { popupDone = () => resolve(won); closePopup(); };
+      if (!won || slow) return close();
+      // The catch animation: the bug shrinks into a jar, and the jar wobbles
+      bug.disabled = true;
+      const jar = el("span", "jar", "🫙");
+      jar.style.left = bug.style.left; jar.style.top = bug.style.top;
+      arena.append(jar);
+      arena.classList.add("catching");
+      info.textContent = "Gotcha…?";
+      setTimeout(() => { info.textContent = "Gotcha!"; }, 1300);
+      setTimeout(close, 1700);
     };
     bug.onclick = () => {
       taps++;
@@ -475,20 +634,29 @@ function encounter(species, photo) {
     const spot = await here();   // null unless the catch map is turned on
     const g = loadGame();
     const pts = RARITY[SPECIES_FACTS[species].rarity].points;
-    const before = bugLevel(g.caught[species] || 0);
+    const before = bugLevel(g.caught[species] || 0), firstEver = totalCaught(g) === 0;
+    const firstLegend = SPECIES_FACTS[species].rarity === "legendary" && !caughtRarity(g, "legendary");
     g.caught[species] = (g.caught[species] || 0) + 1;
     addPoints(g, pts);
     if (spot) g.spots.push({ species, ...spot, when: new Date().toLocaleDateString() });
+    // Story cutscenes for big moments (they play after the pop-up, in this order)
+    if (firstEver) queueScene(FIRST_CATCH);
+    if (firstLegend) queueScene(FIRST_LEGENDARY.map(sl => ({ ...sl, text: sl.text.replace("{bug}", commonName(species)) })));
     const lines = [];
     if (g.caught[species] > 1 && bugLevel(g.caught[species]) > before) lines.push(`⬆️ Your ${commonName(species)} leveled up to Lv ${bugLevel(g.caught[species])}! It's stronger in battles now.`);
     lines.push(...progress(g, { type: "catch", species, pts }));
     if (spot) lines.push("📍 Saved on your catch map.");
+    checkUnlocks(g);
     const extra = lines.map(l => el("p", "new-badge", l));
     saveGame(g);
+    justCaught = species;
     renderGame();
+    justCaught = null;
+    confetti();
 
     await new Promise(r => { popupDone = r; openPopup([el("h2", null, `Gotcha! +${pts} points`), ...extra, factCard(species, g.caught[species])],
       [["Open Innvadex", true, () => { showTab("dex"); $("game").scrollIntoView({ behavior: "smooth" }); }], ["Keep playing", false]]); });
+    await playQueued();
   });
 }
 
@@ -552,10 +720,11 @@ function foeMove(level, team, now, target) {
 }
 
 function battle(foe, gym) {
-  const g = loadGame(), mine = myTeam(g), theirs = foe.team.filter(s => SPECIES_FACTS[s]).map(s => fighter(s));
+  const g = loadGame(), mine = myTeam(g), theirs = foe.team.filter(s => SPECIES_FACTS[s]).map(s => fighter(s, foe.bugLevel || 1));
   if (!mine.length || !theirs.length) return;
   const foeName = gym ? foe.leader : foe.name;
-  let me = 0, them = 0, busy = false, over = false;
+  let me = 0, them = 0, busy = false, over = false, fx = null, heals = foe.heals || 0;
+  const youLabel = `${g.trainer.avatar} ${g.trainer.name || "You"}`;
 
   const field = el("div", "battle-field");
   const bubble = el("p", "speech");
@@ -565,7 +734,7 @@ function battle(foe, gym) {
   log.setAttribute("aria-live", "polite");
   const say = text => { log.textContent = text; };
   const side = (team, i, label, cls) => {
-    const f = team[i], box = el("div", `fighter ${cls}`);
+    const f = team[i], box = el("div", `fighter ${cls}${f.hp <= 0 ? " fainted" : ""}`);
     const hp = el("div", "track"), fill = el("div", "fill" + (f.hp / f.max < 0.3 ? " low" : ""));
     fill.style.width = `${f.hp / f.max * 100}%`; hp.append(fill);
     box.append(el("span", "muted", label), el("span", "bug-emoji", SPECIES_FACTS[f.species].emoji),
@@ -582,7 +751,15 @@ function battle(foe, gym) {
   tackle.classList.add("primary");
   const draw = () => {
     field.innerHTML = "";
-    field.append(side(theirs, them, foeName, "them"), side(mine, me, "You", "you"));
+    field.append(side(theirs, them, foeName, "them"), side(mine, me, youLabel, "you"));
+    // Attack animation: the attacker lunges, the bug that got hit shakes, and the damage floats up
+    if (fx) {
+      const hit = field.querySelector(`.fighter.${fx.target}`), from = field.querySelector(`.fighter.${fx.target === "you" ? "them" : "you"}`);
+      from.classList.add(fx.target === "you" ? "lunge-down" : "lunge-up");
+      if (fx.hit) hit.classList.add("shake");
+      hit.append(el("span", "dmg" + (fx.hit ? "" : " miss"), fx.text));
+      fx = null;
+    }
     special.textContent = `${specialMove(mine[me])} (strong, can miss)`;
     for (const b of [tackle, special]) b.disabled = busy || over;
     swap.disabled = busy || over || nextAlive(mine, me) < 0 || nextAlive(mine, me) === me;
@@ -594,9 +771,11 @@ function battle(foe, gym) {
   // One attack. A special move hits harder but can miss.
   const attack = (a, d, useSpecial, owner) => {
     const move = useSpecial ? specialMove(a) : "Tackle", name = `${owner} ${commonName(a.species)}`;
-    if (useSpecial && Math.random() > SPECIAL_HIT_CHANCE) return say(`${name} used ${move}… but missed!`);
+    const target = d === mine[me] ? "you" : "them";
+    if (useSpecial && Math.random() > SPECIAL_HIT_CHANCE) { fx = { target, text: "Miss!" }; return say(`${name} used ${move}… but missed!`); }
     const dmg = Math.max(1, Math.round(useSpecial ? a.atk * 1.8 + (Math.random() * 6 - 3) : a.atk + (Math.random() * 4 - 2)));
     d.hp = Math.max(0, d.hp - dmg);
+    fx = { target, text: `-${dmg}`, hit: true };
     sound("hit");
     say(`${name} used ${move}! It did ${dmg} damage.`);
   };
@@ -620,13 +799,18 @@ function battle(foe, gym) {
       busy = false; return draw();
     }
     // The AI trainer's turn (see foeMove)
-    const choice = foeMove(foe.level, theirs, them, mine[me]);
-    if (choice === "switch") {
+    let choice = foeMove(foe.level, theirs, them, mine[me]);
+    // Tough leaders can heal a badly hurt bug (a few times per battle)
+    if (heals > 0 && theirs[them].hp / theirs[them].max < 0.3) { choice = "heal"; heals--; }
+    if (choice === "heal") {
+      theirs[them].hp = theirs[them].max; sound("heal");
+      say(`${foeName} gave ${commonName(theirs[them].species)} a Bug Snack. It's all healed!`);
+    } else if (choice === "switch") {
       them = nextHealthiest(theirs, them);
       say(`${foeName} switches to ${commonName(theirs[them].species)}!`); talk(foe.say.next);
     }
     const f = theirs[them], p = mine[me];
-    if (choice !== "switch") attack(f, p, choice === "special", `${foeName}'s`);
+    if (choice === "tackle" || choice === "special") attack(f, p, choice === "special", `${foeName}'s`);
     draw(); await wait(900); if (over) return;
     if (p.hp <= 0) {
       say(`Your ${commonName(p.species)} fainted!`); draw(); await wait(900); if (over) return;
@@ -637,6 +821,7 @@ function battle(foe, gym) {
     busy = false; draw();
   }
 
+  let firstGymWin = false;
   function finish(won, ran) {
     if (over) return;
     over = true; popupDone = null;
@@ -645,17 +830,35 @@ function battle(foe, gym) {
     if (won) {
       const g = loadGame();
       const beatenBefore = gym && g.gyms.includes(foe.id), pts = beatenBefore ? 10 : foe.reward;
+      firstGymWin = gym && !beatenBefore;
       g.wins++; addPoints(g, pts);
       if (gym && !beatenBefore) g.gyms.push(foe.id);
       lines.push(...progress(g, { type: "win" }));
+      checkUnlocks(g);
       saveGame(g); renderGame();
       title = `You beat ${foeName}! +${pts} points`;
     }
     const tipBug = foe.team[Math.floor(Math.random() * foe.team.length)];
     sound(won ? "win" : "lose");
     const said = ran ? null : el("p", "speech", `${foe.emoji} ${foeName}: “${won ? foe.say.lose : foe.say.win}”`);
-    openPopup([el("h2", null, title), ...(said ? [said] : []), ...lines.map(l => el("p", "new-badge", l)),
-      el("p", "muted", `Did you know? ${commonName(tipBug)}: ${SPECIES_FACTS[tipBug].harm}`)], [["OK", true]]);
+    const result = () => {
+      if (won) confetti();
+      openPopup([el("h2", null, title), ...(said ? [said] : []), ...lines.map(l => el("p", "new-badge", l)),
+        el("p", "muted", `Did you know? ${commonName(tipBug)}: ${SPECIES_FACTS[tipBug].harm}`)], [["OK", true]]);
+      popupDone = playQueued;
+    };
+    if (!(won && firstGymWin)) return result();
+    // Beating a gym for the first time: a victory cutscene (and the ending after the last gym)
+    $("gamePopup").hidden = true;
+    if (foe.champion) return cutscene(FINALE).then(result);
+    const next = GYMS[GYMS.indexOf(foe) + 1];
+    cutscene([
+      { scene: foe.id, who: foe.face, name: foe.leader, text: foe.say.lose },
+      { scene: "victory", who: foe.emoji, name: foe.badge, text: `You earned the ${foe.badge}, {name}!` },
+      { scene: next.id, ...HAZEL, text: next.champion
+        ? "You have all 8 gym badges! There's only one battle left: the Oregon Champion."
+        : `Next stop: the ${next.name}. ${next.leader} is waiting for you there!` },
+    ]).then(result);
   }
 
   openPopup([el("h2", null, `${foe.emoji} ${foe.name}`), bubble, field, log, moves], [["Run away", false]]);
@@ -748,7 +951,7 @@ function newQuestion() {
           const lines = progress(g, { type: "quiz", pts: QUIZ_POINTS });
           result.textContent = [`✅ Right! +${QUIZ_POINTS} points (${g.quiz.right} of ${QUIZ_DAILY_MAX} today)`, ...lines].join("  ");
         } else result.textContent = "✅ Right! You've earned all your quiz points for today. Keep practicing!";
-        saveGame(g); renderGame();
+        saveGame(g); renderGame(); playQueued();
       } else {
         b.classList.add("wrong"); sound("wrong");
         [...choices.children].find(c => c.textContent === commonName(answer))?.classList.add("right");
@@ -809,6 +1012,114 @@ function drawSpots(g) {
   map.fitBounds(L.latLngBounds(g.spots.map(sp => [sp.lat, sp.lon])).pad(0.3), { maxZoom: 15 });
 }
 
+// ---------- confetti ----------
+let lastConfetti = 0;
+function confetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || Date.now() - lastConfetti < 800) return;
+  lastConfetti = Date.now();
+  const box = el("div", "confetti");
+  box.setAttribute("aria-hidden", "true");
+  const colors = ["#e74c3c", "#f1c40f", "#2ecc71", "#3498db", "#9b59b6", "#ff8c42"];
+  for (let i = 0; i < 60; i++) {
+    const c = el("i");
+    c.style.left = `${Math.random() * 100}%`;
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = `${Math.random() * 0.3}s`;
+    c.style.animationDuration = `${1.2 + Math.random() * 0.8}s`;
+    c.style.setProperty("--x", `${Math.random() * 200 - 100}px`);
+    c.style.setProperty("--r", `${Math.random() * 720}deg`);
+    box.append(c);
+  }
+  document.body.append(box);
+  setTimeout(() => box.remove(), 2600);
+}
+
+// ---------- cutscenes ----------
+// A cutscene is a list of slides: { scene, who (an emoji), name, text }. "{name}" in the text
+// becomes the player's nickname. Tap, Enter or Space goes to the next slide. Skip or Escape ends it.
+function cutscene(slides) {
+  return new Promise(resolve => {
+    const nick = loadGame().trainer.name || "Ranger";
+    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wrap = el("div", "cutscene");
+    wrap.setAttribute("role", "dialog"); wrap.setAttribute("aria-modal", "true"); wrap.setAttribute("aria-label", "Story");
+    const stage = el("div", "cs-stage"), decor = el("div", "cs-decor"), actor = el("div", "cs-actor");
+    const box = el("div", "cs-box"), who = el("strong"), text = el("p"), next = el("button", "btn primary", "Next ▶");
+    const skip = el("button", "btn cs-skip", "Skip ⏭");
+    next.type = skip.type = "button";
+    text.setAttribute("aria-live", "polite");
+    box.append(who, text, next);
+    stage.append(decor, actor);
+    wrap.append(stage, box, skip);
+
+    let i = -1, typing = null, full = "";
+    const finishTyping = () => { clearInterval(typing); typing = null; text.textContent = full; };
+    function show(n) {
+      i = n;
+      if (i >= slides.length) return done();
+      const s = slides[i], sc = SCENES[s.scene] || SCENES.forest;
+      stage.style.background = sc.bg;
+      decor.textContent = sc.decor;
+      actor.textContent = s.who;
+      actor.classList.remove("enter"); void actor.offsetWidth; actor.classList.add("enter");
+      who.textContent = s.name;
+      full = s.text.replaceAll("{name}", nick);
+      next.textContent = i === slides.length - 1 ? "Done ✔" : "Next ▶";
+      if (calm) return finishTyping();
+      text.textContent = "";
+      let c = 0;
+      clearInterval(typing);
+      typing = setInterval(() => { text.textContent = full.slice(0, ++c); if (c >= full.length) finishTyping(); }, 22);
+    }
+    const advance = () => typing ? finishTyping() : show(i + 1);
+    function done() {
+      clearInterval(typing);
+      wrap.remove();
+      resolve();
+    }
+    wrap.onclick = e => { if (e.target !== skip) advance(); };
+    skip.onclick = done;
+    wrap.onkeydown = e => {
+      if (e.key === "Escape") { e.stopPropagation(); done(); }
+      else if ((e.key === "Enter" || e.key === " ") && e.target !== skip) { e.preventDefault(); advance(); }
+    };
+    document.body.append(wrap);
+    show(0);
+    next.focus();
+  });
+}
+
+// ---------- trainer card ----------
+function editTrainer(first) {
+  return new Promise(resolve => {
+    const g = loadGame();
+    let avatar = g.trainer.avatar;
+    const label = el("label", "trainer-label", "Nickname");
+    const input = el("input", "trainer-input");
+    input.type = "text"; input.maxLength = NAME_MAX; input.value = g.trainer.name;
+    input.placeholder = "Like BugBuster or LeafNinja"; input.id = "trainerName"; label.htmlFor = "trainerName";
+    const picks = el("div", "avatar-picks");
+    for (const a of AVATARS) {
+      const b = el("button", "avatar-pick", a);
+      b.type = "button"; b.setAttribute("aria-pressed", a === avatar); b.setAttribute("aria-label", `Avatar ${a}`);
+      b.onclick = () => { avatar = a; for (const p of picks.children) p.setAttribute("aria-pressed", p === b); };
+      picks.append(b);
+    }
+    const save = () => {
+      const g = loadGame();
+      g.trainer = { name: input.value.trim().slice(0, NAME_MAX), avatar };
+      saveGame(g); renderGame();
+    };
+    popupDone = resolve;
+    openPopup([el("h2", null, "Your trainer card"),
+      el("p", "muted", "Pick a nickname. Don't use your real name, so you stay safe online. It's saved only on this device."),
+      label, input, el("p", "trainer-label", "Pick your avatar"), picks],
+      [["Save", true, save], ...(first ? [] : [["Cancel", false]])]);
+    input.onkeydown = e => { if (e.key === "Enter") { save(); closePopup(); } };
+    input.focus();
+  });
+}
+
 // ---------- wiring ----------
 for (const t of document.querySelectorAll(".game-tabs [data-tab]")) t.onclick = () => {
   showTab(t.dataset.tab);
@@ -824,6 +1135,16 @@ $("mapToggle").onchange = e => {
 $("howToPlay").onclick = showInstructions;
 $("gamePopup").addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); closePopup(); } });
 renderGame();
-if (!loadGame().seenHowTo) { const g = loadGame(); g.seenHowTo = true; saveGame(g); showInstructions(); }
+$("introBtn").onclick = () => cutscene(INTRO);
+$("trainerBtn").onclick = () => editTrainer(false);
+// The first time: the intro story, then the trainer card, then how to play
+{
+  const g = loadGame();
+  if (!g.seenIntro) {
+    const firstTime = !g.seenHowTo;
+    g.seenIntro = true; g.seenHowTo = true; saveGame(g);
+    cutscene(INTRO).then(() => g.trainer.name ? null : editTrainer(true)).then(() => firstTime && showInstructions());
+  }
+}
 
 window.Innvadex = { encounter, native, fakePhoto };

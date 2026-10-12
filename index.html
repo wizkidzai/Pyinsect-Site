@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261011c">
+<link rel="stylesheet" href="assets/site.css?v=20261012a">
 </head>
 <body>
 <div class="wrap">
@@ -54,7 +54,7 @@
   <section class="game" id="game" aria-label="Innvadex game">
     <div class="ledger-head">
       <h2>Innvadex</h2>
-      <span class="game-score"><span id="gameRank" class="status"></span> <span id="gamePoints" class="status">0 points</span> <span id="gameCoins" class="status"></span> <span id="gameProgress" class="status"></span> <span id="gameProtector" class="status"></span></span>
+      <span class="game-score"><button id="trainerBtn" class="status trainer-btn" type="button"></button> <span id="gameRank" class="status"></span> <span id="gameStreak" class="status" hidden></span> <span id="gamePoints" class="status">0 points</span> <span id="gameCoins" class="status"></span> <span id="gameProgress" class="status"></span> <span id="gameProtector" class="status"></span></span>
     </div>
     <div id="daily" class="daily"><span class="daily-label">📅 Today's challenge</span> <strong id="dailyText"></strong> <span id="dailyState" class="daily-state"></span></div>
     <div class="game-bar">
@@ -70,6 +70,7 @@
       <span class="actions">
         <button id="muteBtn" class="btn" type="button" aria-pressed="false">🔊 Sound on</button>
         <button id="howToPlay" class="btn" type="button">How to play</button>
+        <button id="introBtn" class="btn" type="button">🎬 Watch intro</button>
       </span>
     </div>
     <div id="tab-dex" role="tabpanel"><div id="dexGrid" class="dex-grid"></div></div>
@@ -132,7 +133,7 @@
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261011c"></script>
-<script src="assets/game.js?v=20261011c"></script>
+<script src="assets/app.js?v=20261012a"></script>
+<script src="assets/game.js?v=20261012a"></script>
 </body>
 </html>
