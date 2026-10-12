@@ -80,3 +80,30 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [ ] Sounds play, and the mute button stops them.
   - [ ] Your rank goes up when you get enough points.
   - [ ] Buy a Super Net in the shop, and the next minigame has more time.
+
+## Innvadex version 4: animations, cutscenes, trainer card, and streaks
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** The game should feel more alive, like a real video game, with a story.
+- **Why it matters:** A story and fun effects keep people playing, so more invasive bugs get
+  found and reported.
+- **Our idea:**
+  - **Animations:** a jar catches the bug and wobbles, then confetti. Battle attacks lunge and
+    shake, damage numbers float up, and fainted bugs fall over. Confetti for wins, badges, and
+    rank-ups. Animations turn off for people whose device asks for less motion.
+  - **Cutscenes:** an intro story with Professor Hazel, a cutscene before and after each gym, and
+    an ending when you beat all 4 gyms. Every cutscene can be skipped, and the intro can be
+    watched again.
+  - **Trainer card:** pick a nickname (not your real name) and an avatar emoji. Saved only on
+    this device.
+  - **Play streak:** play on days in a row for bonus points and streak badges.
+- **Other ideas we talked about:** none yet.
+- **Done when:**
+  - [ ] The intro cutscene plays the first time, can be skipped, and can be watched again.
+  - [ ] Catching a bug shows the jar animation and confetti.
+  - [ ] Battle attacks shake the bug that got hit and show the damage.
+  - [ ] Gym battles have a cutscene before and after.
+  - [ ] Your nickname and avatar show up in battles.
+  - [ ] Playing two days in a row shows a 2-day streak.

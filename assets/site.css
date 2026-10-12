@@ -337,3 +337,69 @@ input[type=file] { display: none; }
 .map-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 .map-panel p { margin: 0; }
 .catch-map { height: 340px; border-radius: 16px; overflow: hidden; }
+
+/* Innvadex version 4: animations, cutscenes, trainer card */
+.trainer-btn { font: inherit; font-family: var(--mono); font-size: 13px; color: var(--ink); cursor: pointer; border: 1px solid var(--glass-edge); }
+.trainer-btn:hover { color: var(--accent); }
+.trainer-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.trainer-label { margin: 0; font-weight: 600; text-align: left; }
+.trainer-input { font: 16px var(--body); padding: 10px 14px; border-radius: 12px; border: 1px solid var(--glass-edge); background: var(--glass-strong); color: var(--ink); width: 100%; }
+.trainer-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.avatar-picks { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.avatar-pick { font-size: 28px; width: 54px; height: 54px; border-radius: 50%; cursor: pointer; background: var(--glass-strong); border: 2px solid transparent; }
+.avatar-pick[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.1); }
+.avatar-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Catching: the bug shrinks into a jar, then the jar wobbles */
+.wild-bug { animation: wiggle 1.2s ease-in-out infinite; }
+@keyframes wiggle { 25% { rotate: -8deg; } 75% { rotate: 8deg; } }
+.catching .wild-bug { animation: suck .5s ease-in forwards; }
+@keyframes suck { to { transform: scale(0) rotate(360deg); opacity: 0; } }
+.jar { position: absolute; font-size: 64px; line-height: 1; transform: scale(0); animation: jar-in .3s .4s ease-out forwards, wobble .9s .75s ease-in-out; }
+@keyframes jar-in { to { transform: scale(1); } }
+@keyframes wobble { 0%, 100% { rotate: 0deg; } 15% { rotate: -14deg; } 35% { rotate: 12deg; } 55% { rotate: -9deg; } 75% { rotate: 6deg; } }
+
+/* Battles: lunge, shake, floating damage, fainting */
+.fighter { position: relative; }
+.lunge-up { animation: lunge-up .35s ease-out; }
+.lunge-down { animation: lunge-down .35s ease-out; }
+@keyframes lunge-up { 50% { transform: translate(-14px, -14px); } }
+@keyframes lunge-down { 50% { transform: translate(14px, 14px); } }
+.shake { animation: shake .4s ease-in-out .15s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } 50% { background: rgba(179, 38, 30, .3); } }
+.dmg { position: absolute; right: 14px; top: 6px; font: 700 22px var(--display); color: var(--alert); pointer-events: none; animation: float-up 1s ease-out forwards; }
+.dmg.miss { color: var(--muted); }
+@keyframes float-up { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-30px); opacity: 0; } }
+.fighter.fainted .bug-emoji { animation: faint .6s ease-in forwards; }
+@keyframes faint { to { transform: translateY(14px) rotate(90deg); opacity: .3; } }
+
+/* The Innvadex: a bug you just caught pops in */
+.dex-slot.pop { animation: pop .6s ease-out; }
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.game-toast:not([hidden]) { animation: toast-in .3s ease-out; }
+@keyframes toast-in { from { transform: translate(-50%, 20px); opacity: 0; } }
+
+/* Confetti */
+.confetti { position: fixed; inset: 0; z-index: 130; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: confetti-fall 1.6s ease-in forwards; }
+@keyframes confetti-fall { to { transform: translate(var(--x), 105vh) rotate(var(--r)); } }
+
+/* Cutscenes */
+.cutscene { position: fixed; inset: 0; z-index: 125; display: flex; flex-direction: column; justify-content: flex-end; background: #0d1411; cursor: pointer; }
+.cs-stage { position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; transition: background .5s; }
+.cs-decor { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-size: clamp(28px, 7vw, 48px); letter-spacing: .2em; white-space: nowrap; opacity: .9; }
+.cs-actor { font-size: clamp(90px, 22vw, 150px); line-height: 1; margin-bottom: 52px; animation: bob 2.4s ease-in-out infinite; }
+.cs-actor.enter { animation: enter .45s ease-out, bob 2.4s ease-in-out .45s infinite; }
+@keyframes bob { 50% { transform: translateY(-8px); } }
+@keyframes enter { from { transform: translateX(-40vw) scale(.6); opacity: 0; } }
+.cs-box { display: flex; flex-direction: column; gap: 8px; margin: 0 auto 20px; width: min(720px, calc(100% - 32px)); padding: 18px 20px; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 -6px 30px rgba(0, 0, 0, .3); }
+.cs-box strong { font-family: var(--display); font-size: 18px; color: var(--accent); }
+.cs-box p { margin: 0; font-size: 18px; min-height: 3.2em; }
+.cs-box .btn { align-self: flex-end; }
+.cs-skip { position: absolute; top: 14px; right: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .wild-bug, .cs-actor, .cs-actor.enter, .jar, .shake, .lunge-up, .lunge-down, .dex-slot.pop, .game-toast:not([hidden]), .fighter.fainted .bug-emoji { animation: none; }
+  .jar { transform: none; }
+  .cs-stage { transition: none; }
+  .fighter.fainted .bug-emoji { opacity: .3; }
+}
