@@ -18,9 +18,10 @@ function report(name, problems, fix) {
   if (fix) console.log(`   How to fix: ${fix}`);
 }
 
-// Every file in the project, including new files not added to git yet (but not ignored ones)
+// Every file in the project, including new files not added to git yet (but not ignored ones).
+// Submodules (like skills/shared) show up as folders, so we skip anything that isn't a file.
 const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" })
-  .split("\n").filter(f => f && fs.existsSync(f));
+  .split("\n").filter(f => f && fs.existsSync(f) && fs.statSync(f).isFile());
 const strings = text => [...text.replace(/\/\/.*$/gm, "").matchAll(/"([^"]*)"/g)].map(m => m[1]);
 const listIn = (text, start) => {
   const i = text.indexOf(start);
