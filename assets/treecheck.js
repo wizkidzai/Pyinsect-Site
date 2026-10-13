@@ -76,6 +76,27 @@ function reported() {
   if (!$("treeCheck").hidden && treeCheck.steps.at(-1) !== "thanks") goTo("thanks");
 }
 
+// Real photos side by side, each with a short label, and the credit line their license asks for.
+// photos = [{ src, alt, label }], credit = { text, links: [{ text, url }] }. Both come from the
+// tree settings file and can be left out.
+function photoRow(photos, credit) {
+  if (!photos?.length) return [];
+  const row = el("div", "tree-photos");
+  for (const p of photos) {
+    const fig = el("figure"), img = el("img");
+    img.src = p.src; img.alt = p.alt; img.loading = "lazy";
+    fig.append(img, el("figcaption", null, p.label));
+    row.append(fig);
+  }
+  if (!credit) return [row];
+  const line = el("p", "tree-credit", credit.text + " · ");
+  credit.links.forEach((l, i) => {
+    const a = el("a", null, l.text); a.href = l.url; a.target = "_blank"; a.rel = "noopener";
+    line.append(...(i ? [" · "] : []), a);
+  });
+  return [row, line];
+}
+
 // Draws the current step inside the tree check panel
 function showStep() {
   const step = treeCheck.steps.at(-1), tree = treeCheck.tree, box = $("treeStep");
@@ -94,28 +115,11 @@ function showStep() {
     const i = +step.slice(1), q = tree.questions[i];
     title.textContent = q.question;
     const pic = el("div", "tree-pic"); pic.innerHTML = q.picture;   // pictures come from our own settings files
-    box.append(el("p", "tree-count", `Question ${i + 1} of ${tree.questions.length}`), pic, el("p", null, q.help));
+    box.append(el("p", "tree-count", `Question ${i + 1} of ${tree.questions.length}`), pic, ...photoRow(q.photos, q.photoCredit), el("p", null, q.help));
     if (i === 0 && tree.howToTell) {
       const how = el("details", "tree-how");
       how.append(el("summary", null, `Not sure it's an ${tree.name}?`));
-      if (tree.howToTellPhotos?.length) {
-        const photos = el("div", "tree-photos");
-        for (const p of tree.howToTellPhotos) {
-          const fig = el("figure"), img = el("img");
-          img.src = p.src; img.alt = p.alt; img.loading = "lazy";
-          fig.append(img, el("figcaption", null, p.label));
-          photos.append(fig);
-        }
-        how.append(photos);
-        if (tree.photoCredit) {
-          const credit = el("p", "tree-credit", tree.photoCredit.text + " · ");
-          tree.photoCredit.links.forEach((l, i) => {
-            const a = el("a", null, l.text); a.href = l.url; a.target = "_blank"; a.rel = "noopener";
-            credit.append(...(i ? [" · "] : []), a);
-          });
-          how.append(credit);
-        }
-      }
+      how.append(...photoRow(tree.howToTellPhotos, tree.photoCredit));
       if (tree.howToTellPicture) { const pic = el("div", "tree-pic"); pic.innerHTML = tree.howToTellPicture; how.append(pic); }
       how.append(el("p", null, tree.howToTell));
       box.append(how);

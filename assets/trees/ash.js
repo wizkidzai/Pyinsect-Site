@@ -94,6 +94,23 @@ window.PYINSECT_TREES.push({
       id: "galleries",
       sign: "wavy lines (galleries)",
       question: "Do you see any wavy lines under the bark?",
+      // Real photos (optional, any question can have them). Credit: the Oregon photo is public domain
+      // (U.S. Fish and Wildlife Service); the close-up is CC BY 4.0, so we must show the credit and
+      // license and say we changed it (made it smaller). Keep the credit if you keep the photos.
+      photos: [
+        { src: "assets/trees/ash-gallery-oregon.jpg", label: "In Oregon, 2022",
+          alt: "Bark peeled off an infested Oregon ash tree, showing one winding S-shaped tunnel dug by an emerald ash borer larva" },
+        { src: "assets/trees/ash-galleries-closeup.jpg", label: "Close up",
+          alt: "Close-up of wood under peeled bark covered in many winding tunnels, called galleries" },
+      ],
+      photoCredit: {
+        text: "Photos: Tom Brumbelow, U.S. Fish and Wildlife Service (public domain); ImagePerson (made smaller)",
+        links: [
+          { text: "Oregon photo", url: "https://commons.wikimedia.org/wiki/File:Emerald_ash_borer_path_(52485411368).jpg" },
+          { text: "close-up photo", url: "https://commons.wikimedia.org/wiki/File:Trackways_of_Emerald_Ash_Borer_Agrilus_planipennis_1164.jpg" },
+          { text: "CC BY 4.0", url: "https://creativecommons.org/licenses/by/4.0/" },
+        ],
+      },
       help: "Where the bark is cracked or peeled off, look for winding S-shaped tunnels, called galleries. " +
         "Young emerald ash borers (larvae) dig them while they eat the inside of the tree.",
       picture: `<svg viewBox="0 0 320 180" role="img" aria-label="Drawing of wood under peeled bark with winding S-shaped tunnels">
