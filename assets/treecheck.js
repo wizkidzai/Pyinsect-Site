@@ -97,7 +97,9 @@ function showStep() {
     box.append(el("p", "tree-count", `Question ${i + 1} of ${tree.questions.length}`), pic, el("p", null, q.help));
     if (i === 0 && tree.howToTell) {
       const how = el("details", "tree-how");
-      how.append(el("summary", null, `Not sure it's an ${tree.name}?`), el("p", null, tree.howToTell));
+      how.append(el("summary", null, `Not sure it's an ${tree.name}?`));
+      if (tree.howToTellPicture) { const pic = el("div", "tree-pic"); pic.innerHTML = tree.howToTellPicture; how.append(pic); }
+      how.append(el("p", null, tree.howToTell));
       box.append(how);
     }
     button("Yes", "primary", () => answer(i, true));
