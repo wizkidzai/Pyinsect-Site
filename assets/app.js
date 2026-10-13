@@ -281,25 +281,54 @@ function blockReport(card, ai) {
   info.append(el("span", "sent bad", "Not reported: this photo looks AI-generated. " + ai.reasons[0]));
 }
 
-// ---------- your reports (this tab) ----------
-// Reports sent from this tab, newest first, kept in sessionStorage so they survive a reload.
+// ---------- your reports (this phone) ----------
+// Reports sent from this phone, newest first, kept in localStorage so they're still there next
+// time. Only a small copy of each photo is kept (storage is about 5 MB, shared with the game).
+const MINE_MAX = 50, MINE_PHOTO = 320;   // newest 50 reports; photos 320 px on the long side
 const mine = {
-  get() { try { return JSON.parse(sessionStorage.getItem(MINE_KEY)) || []; } catch { return []; } },
+  get() { try { return JSON.parse(localStorage.getItem(MINE_KEY)) || []; } catch { return []; } },
   set(list) {
     // Photos are the big part; if storage is full, drop the oldest photos first
     for (let keep = list.length; keep >= 0; keep--) {
-      try { sessionStorage.setItem(MINE_KEY, JSON.stringify(list.map((m, i) => i < keep ? m : { ...m, photo: null }))); return; } catch {}
+      try { localStorage.setItem(MINE_KEY, JSON.stringify(list.map((m, i) => i < keep ? m : { ...m, photo: null }))); return; } catch {}
     }
   },
 };
+// Reports from before this was saved on the phone (only kept while the tab was open): move them over
+try {
+  const old = JSON.parse(sessionStorage.getItem(MINE_KEY) || "[]");
+  if (old.length) {
+    const have = new Set(mine.get().map(m => m.id));
+    mine.set([...old.filter(m => !have.has(m.id)), ...mine.get()].sort((a, b) => b.id.localeCompare(a.id)).slice(0, MINE_MAX));
+    sessionStorage.removeItem(MINE_KEY);
+  }
+} catch {}
+
+// A small copy of a report photo (base64 JPEG) for "Your reports"
+function smallPhoto(base64) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, MINE_PHOTO / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.75).split(",")[1]);
+    };
+    img.onerror = () => resolve(null);
+    img.src = "data:image/jpeg;base64," + base64;
+  });
+}
 
 // detail = the small line under the name, like "Agrilus planipennis · 91.2%" or the signs seen
+// Added right away (so its "Reported" status can't get lost); the small photo follows a moment later
 function addMine({ report, photo }, detail) {
-  const list = mine.get();
+  const list = mine.get().filter(m => m.id !== report.id);
   list.unshift({ id: report.id, name: report.name, detail: detail || mineDetail(report),
-    timestamp: report.timestamp, model: report.model, photo, status: "Sending report…", ok: false });
-  mine.set(list.slice(0, 30));
+    timestamp: report.timestamp, model: report.model, photo: null, status: "Sending report…", ok: false });
+  mine.set(list.slice(0, MINE_MAX));
   renderMine();
+  if (photo) smallPhoto(photo).then(small => { if (small) updateMine(report.id, { photo: small }); });
 }
 
 function updateMine(id, change) {
@@ -322,12 +351,13 @@ function renderMine() {
     const row = el("div", "row"), img = el("img"), what = el("div", "what"), side = el("div", "when");
     img.alt = ""; if (m.photo) img.src = "data:image/jpeg;base64," + m.photo;
     what.append(el("strong", null, m.name), el("span", "muted", mineDetail(m)));
-    const t = new Date(m.timestamp);
+    // Today: just the time. Earlier days: the date (the list stays for days now)
+    const t = new Date(m.timestamp), today = !isNaN(t) && t.toDateString() === new Date().toDateString();
     side.append(el("span", "state " + (m.ok ? "on" : /^Sending/.test(m.status) ? "" : "warn"), m.ok ? "Reported" : m.status),
-      el("span", null, isNaN(t) ? "" : t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
+      el("span", null, isNaN(t) ? "" : today ? t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : t.toLocaleDateString([], { month: "short", day: "numeric" })));
     row.append(img, what, side);
     if (m.photo) {
-      row.tabIndex = 0; row.setAttribute("role", "button"); row.title = "Show the whole photo";
+      row.tabIndex = 0; row.setAttribute("role", "button"); row.title = "Show the photo";
       const open = () => openViewer(img.src, m.name, [mineDetail(m),
         isNaN(t) ? "" : t.toLocaleString(), m.ok ? "Reported" : m.status].filter(Boolean).join(" · "));
       row.onclick = open;
