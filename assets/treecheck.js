@@ -117,9 +117,10 @@ function showStep() {
     const pic = el("div", "tree-pic"); pic.innerHTML = q.picture;   // pictures come from our own settings files
     box.append(el("p", "tree-count", `Question ${i + 1} of ${tree.questions.length}`), pic, ...photoRow(q.photos, q.photoCredit), el("p", null, q.help));
     // The answer buttons say what they answer ("Yes, I see holes"), so they can't be mixed up with
-    // the "Not sure it's an ash tree?" help below them
-    button(q.yes || "Yes", "primary", () => answer(i, true));
-    button(q.no || "No", "", () => answer(i, false));
+    // the "Not sure it's an ash tree?" help below them. Both look the same on purpose: a filled
+    // "Yes" looked already chosen and nudged people to answer Yes.
+    button(q.yes || "Yes", "answer", () => answer(i, true));
+    button(q.no || "No", "answer", () => answer(i, false));
     box.append(buttons);
     if (i === 0 && tree.howToTell) {
       const how = el("details", "tree-how");

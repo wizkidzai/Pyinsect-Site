@@ -132,6 +132,10 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 .tree-count { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); order: -1; }
 .tree-pic svg, .tree-pic img { display: block; width: 100%; max-width: 420px; height: auto; border-radius: 14px; }
 .tree-answers .btn { min-width: 96px; justify-content: center; padding: 12px 22px; font-size: 16px; }
+/* Yes / No answers: equal, outlined, and only light up when touched (neither looks already chosen) */
+.btn.answer { border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent); }
+.btn.answer:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+.btn.answer:active:not(:disabled) { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .tree-how summary { cursor: pointer; color: var(--accent); font-weight: 500; }
 .tree-how p { margin-top: 6px; color: var(--muted); }
 .tree-how .tree-pic { margin-top: 8px; }
