@@ -384,7 +384,7 @@ function classify(file) {
       }
       if (invasive) {
         // Photos from the in-page camera come straight from the camera; uploads are checked for AI labels
-        const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file).catch(() => ({ verdict: "unknown", reasons: [] }));
+        const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown", reasons: [] }));
         if (ai.verdict === "ai") { blockReport(card, ai); window.Innvadex?.fakePhoto(); }
         else {
           fileReport(bmp, top3[0].species, top3[0].confidence, top3, card);
@@ -392,7 +392,7 @@ function classify(file) {
         }
       } else if (window.Innvadex) {
         // Not invasive: protector points in the game, but only for real (not AI-made) photos
-        const ai = file.fromCamera ? { verdict: "camera" } : await checkAI(file).catch(() => ({ verdict: "unknown" }));
+        const ai = file.fromCamera ? { verdict: "camera" } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown" }));
         if (ai.verdict === "ai") window.Innvadex.fakePhoto();
         else window.Innvadex.native(top3[0].species, top3[0].confidence);
       }
@@ -407,12 +407,15 @@ function classify(file) {
   });
 }
 
-function handleFiles(list) {
+// source = where the photos came from ("pick", "drop", "capture" = the phone's camera app).
+// One photo goes to the crop step first; many photos are checked straight away.
+function handleFiles(list, source) {
   if (!session) return;
   const files = [...list].filter(f => EXT.test(f.name)).sort((a, b) =>
     (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name));
   if (!files.length) { setStatus("No supported images found (jpg, png, bmp, webp).", "error"); return; }
-  files.forEach(classify);
+  if (files.length === 1) showCrop(files[0], source);
+  else files.forEach(classify);
 }
 
 // ---------- camera ----------
@@ -624,9 +627,149 @@ function takePhoto() {
     closeCamera();
     const photo = new File([blob], name, { type: "image/jpeg" });
     photo.fromCamera = true;
-    classify(photo);
-    $("cards").scrollIntoView({ behavior: "smooth", block: "start" });
+    showCrop(photo, "camera");
   }, "image/jpeg", 0.92);
+}
+
+// ---------- crop ----------
+// After one photo is taken or picked, it shows with a box. Drag the box or its corners (or pinch)
+// to frame just the bug, then tap "Check it": the AI sees the bug bigger and guesses better.
+// Leaving the box alone checks the whole photo, like before. The original photo is never changed.
+const MIN_CROP = 224;   // smallest box, in photo pixels: the AI looks at 224×224, so smaller is just blurry
+let cropFile = null, cropSource = "", box = null, minBox = null;   // box and minBox are fractions of the photo
+
+function showCrop(file, source) {
+  if (!$("crop")) {   // pages without the crop step (like 2.7/): check it right away, as before
+    classify(file);
+    if (source === "camera") $("cards").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  cropFile = file; cropSource = source;
+  const img = $("cropImg");
+  if (img.src) URL.revokeObjectURL(img.src);
+  $("checkIt").disabled = true;
+  img.onload = () => {
+    minBox = { w: Math.min(1, MIN_CROP / img.naturalWidth), h: Math.min(1, MIN_CROP / img.naturalHeight) };
+    setBox({ x: 0, y: 0, w: 1, h: 1 });
+    $("checkIt").disabled = false;
+    $("checkIt").focus({ preventScroll: true });
+  };
+  img.onerror = () => { hideCrop(); classify(file); };   // classify shows "Couldn't read this image"
+  img.src = URL.createObjectURL(file);
+  $("cropRetake").textContent = source === "camera" || source === "capture" ? "Retake" : "Choose another";
+  $("crop").hidden = false;
+  $("crop").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function hideCrop() {
+  const img = $("cropImg");
+  $("crop").hidden = true;
+  if (img.src) { URL.revokeObjectURL(img.src); img.removeAttribute("src"); }
+  cropFile = null;
+}
+
+// Keeps the box inside the photo and no smaller than minBox, then draws it
+function setBox(b) {
+  const w = Math.min(Math.max(b.w, minBox.w), 1), h = Math.min(Math.max(b.h, minBox.h), 1);
+  box = { w, h, x: Math.min(Math.max(b.x, 0), 1 - w), y: Math.min(Math.max(b.y, 0), 1 - h) };
+  Object.assign($("cropBox").style, { left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` });
+}
+
+// Grows or shrinks the box around its middle (scale < 1 = smaller box = more zoomed in)
+function scaleBox(from, scale) {
+  const w = Math.min(Math.max(from.w * scale, minBox.w), 1), h = Math.min(Math.max(from.h * scale, minBox.h), 1);
+  setBox({ w, h, x: from.x + (from.w - w) / 2, y: from.y + (from.h - h) / 2 });
+}
+
+async function checkCrop() {
+  const file = cropFile, b = box;
+  if (!file) return;
+  hideCrop();
+  $("cards").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (b.w > 0.999 && b.h > 0.999) { classify(file); return; }   // box untouched: the whole photo
+  try {
+    const bmp = await createImageBitmap(file);
+    const sx = Math.round(b.x * bmp.width), sy = Math.round(b.y * bmp.height);
+    const sw = Math.round(b.w * bmp.width), sh = Math.round(b.h * bmp.height);
+    const c = document.createElement("canvas");
+    c.width = sw; c.height = sh;
+    c.getContext("2d").drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+    bmp.close?.();
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.92));
+    if (!blob) throw new Error("couldn't make the zoomed photo");
+    const zoomed = new File([blob], file.name.replace(/\.[^.]+$/, "") + "-zoomed.jpg", { type: "image/jpeg" });
+    zoomed.fromCamera = file.fromCamera;
+    zoomed.original = file;   // the AI-photo check reads labels that only the original file has
+    classify(zoomed);
+  } catch (e) {
+    console.error(e);
+    classify(file);   // zooming failed: check the whole photo instead
+  }
+}
+
+function retake() {
+  const source = cropSource;
+  hideCrop();
+  if (source === "camera") openCamera();
+  else if (source === "capture") $("captureInput").click();
+  else $("photoInput").click();
+}
+
+if ($("crop")) {
+  $("checkIt").onclick = checkCrop;
+  $("cropCancel").onclick = hideCrop;
+  $("cropRetake").onclick = retake;
+  $("cropWhole").onclick = () => setBox({ x: 0, y: 0, w: 1, h: 1 });
+
+  // Drag the box to move it, drag a corner to resize it, or pinch with two fingers anywhere
+  const stage = $("cropStage"), fingers = new Map();
+  let drag = null, pinch = null;
+  const spread = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+  stage.addEventListener("pointerdown", e => {
+    if (!box) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size === 2) { drag = null; pinch = { spread: spread(), box: { ...box } }; return; }
+    const edge = e.target.dataset?.edge || (e.target === $("cropBox") ? "move" : null);
+    if (!edge) return;
+    e.preventDefault();
+    try { stage.setPointerCapture(e.pointerId); } catch {}   // keeps the drag going if the finger slides off the photo
+    drag = { id: e.pointerId, edge, x: e.clientX, y: e.clientY, box: { ...box } };
+  });
+  stage.addEventListener("pointermove", e => {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && fingers.size === 2) { scaleBox(pinch.box, pinch.spread / spread()); return; }
+    if (!drag || drag.id !== e.pointerId) return;
+    const r = stage.getBoundingClientRect(), s = drag.box;
+    const dx = (e.clientX - drag.x) / r.width, dy = (e.clientY - drag.y) / r.height;
+    if (drag.edge === "move") { setBox({ ...s, x: s.x + dx, y: s.y + dy }); return; }
+    // Corners: the opposite corner stays put
+    let { x, y, w, h } = s;
+    const right = s.x + s.w, bottom = s.y + s.h;
+    if (drag.edge.includes("w")) { x = Math.min(Math.max(s.x + dx, 0), right - minBox.w); w = right - x; }
+    if (drag.edge.includes("e")) w = Math.min(Math.max(s.w + dx, minBox.w), 1 - s.x);
+    if (drag.edge.includes("n")) { y = Math.min(Math.max(s.y + dy, 0), bottom - minBox.h); h = bottom - y; }
+    if (drag.edge.includes("s")) h = Math.min(Math.max(s.h + dy, minBox.h), 1 - s.y);
+    setBox({ x, y, w, h });
+  });
+  ["pointerup", "pointercancel"].forEach(t => stage.addEventListener(t, e => {
+    fingers.delete(e.pointerId);
+    if (drag?.id === e.pointerId) drag = null;
+    if (fingers.size < 2) pinch = null;
+  }));
+
+  // Keyboard: arrows move the box (Shift = faster), + and - resize it, Enter checks the photo
+  $("cropBox").addEventListener("keydown", e => {
+    if (!box) return;
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (moves[e.key]) setBox({ ...box, x: box.x + moves[e.key][0], y: box.y + moves[e.key][1] });
+    else if (e.key === "+" || e.key === "=") scaleBox(box, 1.1);
+    else if (e.key === "-" || e.key === "_") scaleBox(box, 0.9);
+    else if (e.key === "Enter") checkCrop();
+    else return;
+    e.preventDefault();
+  });
 }
 
 $("openCamera").onclick = openCamera;
@@ -634,7 +777,7 @@ $("closeCamera").onclick = closeCamera;
 $("shutter").onclick = takePhoto;
 $("switchCamera").onclick = () => { facing = facing === "environment" ? "user" : "environment"; startCamera(); };
 $("useCameraApp").onclick = () => { closeCamera(); $("captureInput").click(); };
-$("captureInput").onchange = e => { handleFiles(e.target.files); e.target.value = ""; };
+$("captureInput").onchange = e => { handleFiles(e.target.files, "capture"); e.target.value = ""; };
 // Don't keep the camera running in a background tab
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) stopStream();
@@ -643,15 +786,15 @@ document.addEventListener("visibilitychange", () => {
 
 // ---------- wiring ----------
 $("pickPhotos").onclick = () => $("photoInput").click();
-$("photoInput").onchange = e => { handleFiles(e.target.files); e.target.value = ""; };
+$("photoInput").onchange = e => { handleFiles(e.target.files, "pick"); e.target.value = ""; };
 if ($("pickFolder")) {  // only on pages that have the folder button
   $("pickFolder").onclick = () => $("folderInput").click();
-  $("folderInput").onchange = e => { handleFiles(e.target.files); e.target.value = ""; };
+  $("folderInput").onchange = e => { handleFiles(e.target.files, "pick"); e.target.value = ""; };
 }
 const tray = $("tray");
 ["dragenter", "dragover"].forEach(t => tray.addEventListener(t, e => { e.preventDefault(); tray.classList.add("drag"); }));
 ["dragleave", "drop"].forEach(t => tray.addEventListener(t, e => { e.preventDefault(); tray.classList.remove("drag"); }));
-tray.addEventListener("drop", e => handleFiles(e.dataTransfer.files));
+tray.addEventListener("drop", e => handleFiles(e.dataTransfer.files, "drop"));
 
 $("retryReports").onclick = () => sendPending();
 window.addEventListener("online", () => sendPending());

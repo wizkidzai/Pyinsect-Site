@@ -56,7 +56,7 @@ a { color: var(--accent); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* The glass material, shared by every panel */
-.tray, .camera, .reporting, .card, .hero, .rows, .empty, nav, .status, .chip {
+.tray, .camera, .crop, .reporting, .card, .hero, .rows, .empty, nav, .status, .chip {
   position: relative;
   background: var(--glass);
   -webkit-backdrop-filter: var(--blur);
@@ -65,7 +65,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   box-shadow: var(--glass-shadow), var(--glass-shine);
 }
 /* A soft diagonal sheen across the top of the bigger panels */
-.tray::before, .camera::before, .reporting::before, .card::before, .hero::before, .rows::before {
+.tray::before, .camera::before, .crop::before, .reporting::before, .card::before, .hero::before, .rows::before {
   content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; border-radius: inherit; pointer-events: none;
   background: linear-gradient(135deg, rgba(255, 255, 255, .45) 0%, rgba(255, 255, 255, .08) 38%, transparent 60%);
   mix-blend-mode: soft-light;
@@ -158,6 +158,26 @@ input[type=file] { display: none; }
 .focus-ring { position: absolute; width: 72px; height: 72px; margin: -36px 0 0 -36px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(0, 0, 0, .35); pointer-events: none; animation: focus-ring .5s ease-out; }
 @keyframes focus-ring { from { transform: scale(1.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .focus-ring { animation: none; } }
+/* Crop: the stage shrinks to the photo, so the box's % sizes are % of the photo */
+.crop { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 28px; scroll-margin-top: 12px; }
+.crop .hint { margin: 0 6px; }
+.crop-stage { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; border-radius: 16px; overflow: hidden; background: #000; touch-action: none; user-select: none; -webkit-user-select: none; }
+.crop-stage img { display: block; max-width: 100%; max-height: 65vh; -webkit-user-drag: none; pointer-events: none; }
+/* The huge shadow darkens everything outside the box */
+.crop-box { position: absolute; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .5); cursor: move; outline: none; }
+.crop-box:focus-visible { border-color: var(--accent); }
+.crop-box .handle { position: absolute; width: 48px; height: 48px; }   /* big enough to grab with a finger, mostly inside the box so the photo edge doesn't cut it off */
+.crop-box .handle::after { content: ""; position: absolute; width: 18px; height: 18px; border: 4px solid #fff; }
+.handle[data-edge=nw] { left: -16px; top: -16px; cursor: nwse-resize; }
+.handle[data-edge=ne] { right: -16px; top: -16px; cursor: nesw-resize; }
+.handle[data-edge=sw] { left: -16px; bottom: -16px; cursor: nesw-resize; }
+.handle[data-edge=se] { right: -16px; bottom: -16px; cursor: nwse-resize; }
+.handle[data-edge=nw]::after { left: 14px; top: 14px; border-right: 0; border-bottom: 0; }
+.handle[data-edge=ne]::after { right: 14px; top: 14px; border-left: 0; border-bottom: 0; }
+.handle[data-edge=sw]::after { left: 14px; bottom: 14px; border-right: 0; border-top: 0; }
+.handle[data-edge=se]::after { right: 14px; bottom: 14px; border-left: 0; border-top: 0; }
+.crop-bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.crop-bar #cropCancel { margin-right: auto; }
 .zoom-bar { display: flex; align-items: center; gap: 12px; padding: 0 8px; font-size: 14px; }
 .zoom-bar input { flex: 1; min-width: 0; height: 32px; accent-color: var(--accent); cursor: pointer; }
 .zoom-bar output { font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: right; }

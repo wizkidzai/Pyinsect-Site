@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261012b">
+<link rel="stylesheet" href="assets/site.css?v=20261012c">
 </head>
 <body>
 <div class="wrap">
@@ -54,6 +54,23 @@
       <button id="shutter" class="shutter" type="button" aria-label="Take photo" disabled></button>
       <button id="switchCamera" class="btn" type="button" hidden>Switch camera</button>
       <button id="useCameraApp" class="btn" type="button" hidden>Use camera app</button>
+    </div>
+  </section>
+
+  <section id="crop" class="crop" aria-label="Zoom in on the bug" hidden>
+    <p class="hint">Drag the box or its corners (or pinch) around the bug or damage. Or just tap <strong>Check it</strong> to check the whole photo.</p>
+    <div id="cropStage" class="crop-stage">
+      <img id="cropImg" alt="Your photo">
+      <div id="cropBox" class="crop-box" tabindex="0" role="group" aria-label="Zoom box. Arrow keys move it. Plus and minus make it bigger or smaller.">
+        <span class="handle" data-edge="nw"></span><span class="handle" data-edge="ne"></span>
+        <span class="handle" data-edge="sw"></span><span class="handle" data-edge="se"></span>
+      </div>
+    </div>
+    <div class="crop-bar">
+      <button id="cropCancel" class="btn" type="button">Cancel</button>
+      <button id="cropRetake" class="btn" type="button">Retake</button>
+      <button id="cropWhole" class="btn" type="button">Whole photo</button>
+      <button id="checkIt" class="btn primary" type="button" disabled>Check it</button>
     </div>
   </section>
 
@@ -138,7 +155,7 @@
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261012b"></script>
+<script src="assets/app.js?v=20261012c"></script>
 <script src="assets/game.js?v=20261011c"></script>
 </body>
 </html>
