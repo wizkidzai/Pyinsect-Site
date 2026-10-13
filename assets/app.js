@@ -440,6 +440,7 @@ async function startCamera() {
     video.classList.toggle("mirror", facing === "user");
     cameraMessage("");
     setupZoom();
+    setupFocus();
     $("shutter").disabled = false;
     $("useCameraApp").hidden = true;
     const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
@@ -461,6 +462,7 @@ function stopStream() {
   stream = null;
   $("cameraVideo").srcObject = null;
   resetZoom();
+  resetFocus();
 }
 
 // ---------- camera zoom ----------
@@ -515,23 +517,73 @@ async function applyRealZoom() {
   zoomBusy = false;
 }
 
+// ---------- tap to focus ----------
+// Some phones (mostly Android with Chrome) let a website choose where the camera focuses.
+// Tap the bug, a ring shows where, and a few seconds later the camera goes back to focusing by
+// itself. On other phones tapping does nothing, and no ring shows, so it never pretends to work.
+let focusModes = [], focusTimer = 0, ringTimer = 0;
+
+function setupFocus() {
+  if (!$("focusRing")) return;
+  const modes = stream.getVideoTracks()[0].getCapabilities?.().focusMode || [];
+  const canAim = navigator.mediaDevices.getSupportedConstraints?.().pointsOfInterest;
+  focusModes = canAim && (modes.includes("single-shot") || modes.includes("continuous")) ? modes : [];
+}
+
+function resetFocus() {
+  focusModes = [];
+  clearTimeout(focusTimer); clearTimeout(ringTimer);
+  if ($("focusRing")) $("focusRing").hidden = true;
+}
+
+// x, y = where the tap was on the screen
+function focusAt(x, y) {
+  const video = $("cameraVideo"), box = document.querySelector(".viewfinder").getBoundingClientRect();
+  if (!stream || !focusModes.length || !video.videoWidth) return;
+  // The video is scaled to cover the box (object-fit: cover), then digitally zoomed around the
+  // middle, and maybe mirrored. Undo each of those to find the spot in the camera's own picture,
+  // where 0 is the left/top edge and 1 is the right/bottom edge.
+  const fit = Math.max(box.width / video.videoWidth, box.height / video.videoHeight);
+  const z = realZoom ? 1 : zoom, clamp = n => Math.min(Math.max(n, 0), 1);
+  let fx = (x - box.left - box.width / 2) / z / (video.videoWidth * fit) + 0.5;
+  const fy = (y - box.top - box.height / 2) / z / (video.videoHeight * fit) + 0.5;
+  if (video.classList.contains("mirror")) fx = 1 - fx;
+
+  const ring = $("focusRing");
+  ring.hidden = true; void ring.offsetWidth;   // restart the ring's animation
+  ring.style.left = `${x - box.left}px`; ring.style.top = `${y - box.top}px`;
+  ring.hidden = false;
+  clearTimeout(ringTimer); ringTimer = setTimeout(() => { ring.hidden = true; }, 1200);
+
+  const track = stream.getVideoTracks()[0], once = focusModes.includes("single-shot");
+  track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x: clamp(fx), y: clamp(fy) }], focusMode: once ? "single-shot" : "continuous" }] }).catch(() => {});
+  clearTimeout(focusTimer);
+  if (once && focusModes.includes("continuous")) {
+    focusTimer = setTimeout(() => { if (stream) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {}); }, 5000);
+  }
+}
+
 if ($("zoom")) {
   $("zoom").oninput = e => setZoom(+e.target.value);
-  // Two-finger pinch: zoom grows or shrinks by how much the fingers spread apart
+  // Two-finger pinch: zoom grows or shrinks by how much the fingers spread apart.
+  // One quick finger tap that doesn't slide: focus there.
   const viewfinder = document.querySelector(".viewfinder"), fingers = new Map();
-  let pinch = null;
+  let pinch = null, tap = null;
   const spread = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
   viewfinder.addEventListener("pointerdown", e => {
     fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    tap = fingers.size === 1 ? { id: e.pointerId, x: e.clientX, y: e.clientY, at: Date.now() } : null;
     if (fingers.size === 2) pinch = { spread: spread(), zoom };
   });
   viewfinder.addEventListener("pointermove", e => {
     if (!fingers.has(e.pointerId)) return;
     fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10) tap = null;
     if (pinch && fingers.size === 2) setZoom(pinch.zoom * spread() / pinch.spread);
   });
   ["pointerup", "pointercancel", "pointerleave"].forEach(t => viewfinder.addEventListener(t, e => {
-    fingers.delete(e.pointerId);
+    if (t === "pointerup" && tap?.id === e.pointerId && Date.now() - tap.at < 500) focusAt(tap.x, tap.y);
+    if (fingers.delete(e.pointerId)) tap = null;
     if (fingers.size < 2) pinch = null;
   }));
   // Laptop trackpads send a pinch as a mouse wheel with the Ctrl key held
