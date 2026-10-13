@@ -201,9 +201,10 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   if something was found near them. Today, reports have no location, nobody but our team can
   see them, and "Your reports" disappears when you close the tab.
 - **Our idea:**
-  - **Rough area:** a checkbox **📍 Add my rough area to my reports (about 1 km)** on the home
-    page card and on the tree check's photo step. It's ticked at first, people can untick it,
-    and the phone remembers their choice. The browser also asks before sharing a location.
+  - **Rough area:** a checkbox **📍 Add my rough area to my report (about 1 km)** on the screens
+    where the photo is taken and checked (the camera and the "Check it" screen). It's ticked at
+    first, people can untick it, and the phone remembers their choice. The browser also asks
+    before sharing a location.
   - The location is rounded **on the phone** to about a 1 km square before it's sent, so the
     exact spot never leaves the phone and nobody can find someone's house.
   - **Checking reports:** on the team's password-protected reports page, a team member looks at
@@ -236,7 +237,8 @@ To add one, ask your AI helper to help you plan a new feature. It will use
     people can still untick it.
 - **User flow:**
   - **Someone sending a report:**
-    1. Open the app. The 📍 rough area box is ticked. Take or pick a photo.
+    1. Take or pick a photo. The camera and the "Check it" screen show the 📍 rough area box,
+       already ticked.
     2. When a report is sent, the browser asks for location the first time → Allow → the
        report goes with a rough 1 km square. Untick the box or tap Don't allow → it goes
        without an area (and doesn't show on the map).

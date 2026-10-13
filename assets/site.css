@@ -274,6 +274,7 @@ input[type=file] { display: none; }
 .card .tree-signs { margin: 0; font-size: 14px; }
 /* "Add my rough area" checkbox and the line on the result card */
 .area-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; align-self: flex-start; }
+.camera .area-toggle, .crop .area-toggle { margin: 0 8px; }
 .area-toggle input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 .card .area-line { font-size: 13px; color: var(--muted); }
 

@@ -165,11 +165,8 @@ function showStep() {
     const cam = button("Take photo", "primary", () => { treeCheck.pending = photoTag(); openCamera(); });
     const pick = button("Select photo", "", () => { treeCheck.pending = photoTag(); $("photoInput").click(); });
     cam.disabled = pick.disabled = !ready;
-    // The same rough area setting as the home page card (app.js keeps them in step)
-    const areaLabel = el("label", "area-toggle"), areaBox = el("input", "area-box");
-    areaBox.type = "checkbox"; wireAreaBox(areaBox);
-    areaLabel.append(areaBox, " 📍 Add my rough area to my report (about 1 km)");
-    box.append(buttons, areaLabel, el("p", "hint", "Your photo will be sent to the Pyinsect team, so a person can look at it."));
+    // (The "📍 Add my rough area" box is on the camera and "Check it" screens that come next.)
+    box.append(buttons, el("p", "hint", "Your photo will be sent to the Pyinsect team, so a person can look at it."));
     if (!ready) {
       box.append(el("p", "hint", "Getting the AI ready…"));
       setTimeout(() => { if (treeCheck.steps.at(-1) === "photo" && !$("treeCheck").hidden) showStep(); }, 500);

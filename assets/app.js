@@ -257,7 +257,7 @@ function getArea() {
     { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }));
 }
 
-// Every "rough area" checkbox on the page (home card, tree check photo step) shows the same setting
+// Every "rough area" checkbox on the page (camera screen, "Check it" screen) shows the same setting
 function wireAreaBox(box) {
   box.checked = shareArea();
   box.onchange = () => {
