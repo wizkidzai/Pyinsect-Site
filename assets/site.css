@@ -56,7 +56,7 @@ a { color: var(--accent); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* The glass material, shared by every panel */
-.tray, .camera, .crop, .reporting, .card, .hero, .rows, .empty, nav, .status, .chip {
+.tray, .camera, .crop, .tree-check, .reporting, .card, .hero, .rows, .empty, nav, .status, .chip {
   position: relative;
   background: var(--glass);
   -webkit-backdrop-filter: var(--blur);
@@ -65,7 +65,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   box-shadow: var(--glass-shadow), var(--glass-shine);
 }
 /* A soft diagonal sheen across the top of the bigger panels */
-.tray::before, .camera::before, .crop::before, .reporting::before, .card::before, .hero::before, .rows::before {
+.tray::before, .camera::before, .crop::before, .tree-check::before, .reporting::before, .card::before, .hero::before, .rows::before {
   content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; border-radius: inherit; pointer-events: none;
   background: linear-gradient(135deg, rgba(255, 255, 255, .45) 0%, rgba(255, 255, 255, .08) 38%, transparent 60%);
   mix-blend-mode: soft-light;
@@ -119,6 +119,25 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 .tray.drag { background: var(--glass-strong); border-color: var(--accent); transform: scale(1.01); }
 .tray p { margin: 0; color: var(--muted); max-width: 62ch; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* Home page: two equal choices, side by side on wide screens, stacked on phones */
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.choices .tray .actions { margin-top: auto; }   /* buttons line up at the bottom of both cards */
+
+/* Tree check: one question at a time */
+.tree-check { border-radius: 26px; padding: 20px; display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 12px; }
+.tree-step { display: flex; flex-direction: column; gap: 12px; }
+.tree-step p { margin: 0; max-width: 62ch; }
+.tree-title { font-size: 22px; font-weight: 700; outline: none; text-wrap: balance; }
+.tree-count { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); order: -1; }
+.tree-pic svg, .tree-pic img { display: block; width: 100%; max-width: 420px; height: auto; border-radius: 14px; }
+.tree-answers .btn { min-width: 96px; justify-content: center; padding: 12px 22px; font-size: 16px; }
+.tree-how summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.tree-how p { margin-top: 6px; color: var(--muted); }
+.link { align-self: flex-start; background: none; border: 0; padding: 4px 0; font: inherit; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tree-nav { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.tree-nav #treeClose { margin-left: auto; }
 .btn {
   position: relative; font: 500 14px var(--body); color: var(--ink); cursor: pointer;
   display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px;

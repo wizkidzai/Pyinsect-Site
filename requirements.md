@@ -122,7 +122,7 @@ To add one, ask your AI helper to help you plan a new feature. It will use
 
 ## Ash tree check
 
-- **Status:** Planned
+- **Status:** Building
 - **Asked by:** Eshan, 2026-10-12
 - **Who it's for:**
   - **New users:** people who care for their backyard and have an ash tree. They don't know if

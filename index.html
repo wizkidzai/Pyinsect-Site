@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261012c">
+<link rel="stylesheet" href="assets/site.css?v=20261012d">
 </head>
 <body>
 <div class="wrap">
@@ -21,7 +21,9 @@
     <span id="status" class="status busy"><span class="dot"></span><span id="statusText">Loading model…</span></span>
   </header>
 
-  <section id="tray" class="tray" aria-label="Add photos">
+  <div id="choices" class="choices">
+  <section id="tray" class="tray" aria-labelledby="trayTitle">
+    <h2 id="trayTitle">📷 Report a bug or damage</h2>
     <p>Take a photo of an insect, drop photos here, or choose photos. Photos are identified on this device. When a photo shows an invasive species, a report with a reduced copy of the photo is sent to the Pyinsect team.</p>
     <div class="actions">
       <button id="openCamera" class="btn primary" type="button" disabled>
@@ -35,6 +37,25 @@
     </div>
     <input id="photoInput" type="file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*" multiple>
     <input id="captureInput" type="file" accept="image/*" capture="environment">
+  </section>
+
+  <!-- Filled in from the tree settings (assets/trees/*.js) by assets/treecheck.js -->
+  <section id="treeStart" class="tray" aria-labelledby="treeStartTitle" hidden>
+    <h2 id="treeStartTitle"></h2>
+    <p id="treeStartText"></p>
+    <div class="actions">
+      <button id="startTreeCheck" class="btn primary" type="button">Start</button>
+    </div>
+  </section>
+  </div>
+
+  <section id="treeCheck" class="tree-check" aria-label="Tree check" hidden>
+    <div id="treeStep" class="tree-step"></div>
+    <div class="tree-nav">
+      <button id="treeBack" class="btn" type="button">Back</button>
+      <button id="treeStartOver" class="btn" type="button" hidden>Start over</button>
+      <button id="treeClose" class="btn" type="button">Close</button>
+    </div>
   </section>
 
   <section id="camera" class="camera" aria-label="Camera" hidden>
@@ -155,7 +176,9 @@
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261012c"></script>
+<script src="assets/app.js?v=20261012d"></script>
+<script src="assets/trees/ash.js?v=20261012d"></script>
+<script src="assets/treecheck.js?v=20261012d"></script>
 <script src="assets/game.js?v=20261011c"></script>
 </body>
 </html>
