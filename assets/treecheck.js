@@ -165,6 +165,7 @@ function showStep() {
     const cam = button("Take photo", "primary", () => { treeCheck.pending = photoTag(); openCamera(); });
     const pick = button("Select photo", "", () => { treeCheck.pending = photoTag(); $("photoInput").click(); });
     cam.disabled = pick.disabled = !ready;
+    // (The "📍 Add my rough area" box is on the camera and "Check it" screens that come next.)
     box.append(buttons, el("p", "hint", "Your photo will be sent to the Pyinsect team, so a person can look at it."));
     if (!ready) {
       box.append(el("p", "hint", "Getting the AI ready…"));

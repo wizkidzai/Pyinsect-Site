@@ -46,6 +46,13 @@ const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
 const recent = new Map(), wrong = new Map();
 const reportCache = new Map();      // id → report JSON (reports never change)
 let listCache = { at: 0, ids: null };
+// map.json (in the private repo): one small line per report, for the reports map and check levels:
+//   { id, kind: "invasive" | "tree", name, area: { lat, lon } | null, month: "2026-10", level }
+// level: "unchecked" (just sent), "ai" (an AI thinks it's a match; not used yet),
+//        "verified" (a person on the team confirmed it), "not_match" (a person said no).
+const INDEX_PATH = "map.json", LEVELS = ["unchecked", "ai", "verified", "not_match"];
+const INDEX_CACHE_MS = 30000;       // the public map reads map.json at most every 30 s
+let indexCache = { at: 0, list: null };
 let privateCheck = { repo: null, at: 0 };   // last time REPORTS_REPO was confirmed private
 
 export default {
@@ -63,9 +70,10 @@ export default {
 // ---------- receiving reports from the website ----------
 
 async function submit(request, env) {
+  const url = new URL(request.url);
   const cors = {
     "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -75,9 +83,31 @@ async function submit(request, env) {
   });
 
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (request.method === "GET" && url.pathname === "/map") {
+    // Public: every report with a rough area that hasn't been marked "not a match". Only what,
+    // where (the ~1 km square), when (the month), and how well it was checked. No ids or photos.
+    try {
+      const list = (await readIndexCached(env)).filter(e => e.area && e.level !== "not_match")
+        .map(e => ({ kind: e.kind, name: e.name, lat: e.area.lat, lon: e.area.lon, month: e.month, level: e.level }));
+      return reply(200, { reports: list });
+    } catch (e) {
+      return reply(502, { error: e.message });
+    }
+  }
+  if (request.method === "GET" && url.pathname === "/status") {
+    // A phone asks for the check levels of its own reports (it knows their ids). Up to 50 at a time.
+    const ids = (url.searchParams.get("ids") || "").split(",").filter(id => ID_RE.test(id)).slice(0, 50);
+    try {
+      const list = await readIndexCached(env), levels = {};
+      for (const id of ids) { const e = list.find(x => x.id === id); if (e) levels[id] = e.level; }
+      return reply(200, { levels });
+    } catch (e) {
+      return reply(502, { error: e.message });
+    }
+  }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 9, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 10, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   const origin = request.headers.get("Origin");
@@ -112,6 +142,12 @@ async function submit(request, env) {
     return reply(502, { error: e.message });
   }
   listCache.at = 0;
+  // Add it to map.json. If that fails, the report is still saved (and gets added when it's checked).
+  try {
+    await updateIndex(env, list => { if (!list.some(e => e.id === report.id)) list.push(indexEntry(report, "unchecked")); });
+  } catch (e) {
+    console.log("map.json not updated:", e.message);
+  }
   return reply(201, { ok: true, id: report.id });
 }
 
@@ -149,6 +185,15 @@ function checkReport(body) {
     && r.top3.every(t => t && SPECIES_RE.test(t.species) && pct(t.confidence));
   if (!top3Ok && !(tree && r.top3 === undefined)) return { error: "Bad top-3 list." };
 
+  // Rough area for the reports map (optional). Rounded to the ~1 km grid again here, so even a
+  // changed site can't save an exact spot.
+  let area = null;
+  if (r.area !== undefined && r.area !== null) {
+    const { lat, lon } = r.area || {};
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return { error: "Bad area." };
+    area = roughArea(lat, lon);
+  }
+
   if (typeof photo !== "string" || photo.length > MAX_PHOTO_BYTES * 4 / 3 + 4) return { error: "Photo missing or too large." };
   let bytes;
   try { bytes = atob(photo); } catch { return { error: "Photo isn't valid base64." }; }
@@ -175,6 +220,7 @@ function checkReport(body) {
         name: r.signs.length ? `Possible ${tree.pest} damage` : `${tree.tree} to check`,
         signs: r.signs,
         signs_text: r.signs.length ? r.signs.map(s => tree.signs[s]).join(", ") : "None. They were still worried and sent a photo.",
+        ...(area ? { area } : {}),
         pest: tree.pest,
         top3,
         photo: `${r.id}.jpg`,
@@ -193,6 +239,7 @@ function checkReport(body) {
       scientific: label(r.scientific, r.species),
       confidence: r.confidence,
       top3,
+      ...(area ? { area } : {}),
       photo: `${r.id}.jpg`,
       model: short(r.model, 40),
       app_version: short(r.app_version, 20),
@@ -219,7 +266,33 @@ async function viewer(request, env, rest) {
   }
 
   try {
-    if (rest === "/api/reports") return json(200, await latestReports(env));
+    if (rest === "/api/reports") {
+      // The newest reports, plus each one's check level from map.json
+      const data = await latestReports(env), list = (await readIndex(env)).list;
+      data.levels = Object.fromEntries(data.reports.map(r => [r.id, list.find(e => e.id === r.id)?.level || "unchecked"]));
+      return json(200, data);
+    }
+    // A team member checked a report: { level: "verified" | "not_match" | "unchecked" }
+    const check = rest.match(/^\/api\/check\/([0-9a-f-]{1,40})$/);
+    if (check && request.method === "POST") {
+      const id = check[1];
+      let level;
+      try { level = (await request.json()).level; } catch { return json(400, { error: "Not valid JSON." }); }
+      if (!ID_RE.test(id) || !["verified", "not_match", "unchecked"].includes(level)) return json(400, { error: "Bad check." });
+      // Reports sent before map.json existed aren't in it yet: add them from the saved report
+      let saved = null;
+      if (!(await readIndex(env)).list.some(e => e.id === id)) {
+        const res = await githubRead(env, `reports/${id}.json`);
+        if (!res) return json(404, { error: "No such report." });
+        saved = await res.json();
+      }
+      await updateIndex(env, list => {
+        const e = list.find(x => x.id === id);
+        if (e) e.level = level;
+        else if (saved) list.push(indexEntry(saved, level));
+      });
+      return json(200, { ok: true, id, level });
+    }
     const photo = rest.match(/^\/api\/photo\/([0-9a-f-]{1,40})$/);
     if (photo && ID_RE.test(photo[1])) {
       const res = await githubRead(env, `reports/${photo[1]}.jpg`);
@@ -307,6 +380,43 @@ async function githubCreate(env, path, base64, message) {
   if (!res.ok) throw new Error(ghError(res.status));
 }
 
+// ---------- map.json: the list for the reports map and check levels ----------
+
+function indexEntry(report, level) {
+  return { id: report.id, kind: report.kind === "tree" ? "tree" : "invasive", name: report.name,
+    area: report.area || null, month: String(report.timestamp || report.id).replace(/^(\d{4})-?(\d{2}).*/, "$1-$2"), level };
+}
+
+// The list and its version (sha). GitHub needs the version to change the file, and refuses the
+// change if someone else changed it first, so two updates can't erase each other.
+async function readIndex(env) {
+  const res = await gh(env, `contents/${INDEX_PATH}`);
+  if (res.status === 404) return { list: [], sha: null };
+  if (!res.ok) throw new Error(ghError(res.status));
+  const file = await res.json();
+  const text = new TextDecoder().decode(Uint8Array.from(atob((file.content || "").replace(/\s/g, "")), c => c.charCodeAt(0)));
+  return { list: text.trim() ? JSON.parse(text) : [], sha: file.sha };
+}
+
+// Changes the list with change(list), then saves it. Tries again (up to 4 times) if someone else
+// changed it at the same moment.
+async function updateIndex(env, change) {
+  for (let tries = 0; ; tries++) {
+    const { list, sha } = await readIndex(env);
+    change(list);
+    const body = { message: "Update map.json", content: toBase64(JSON.stringify(list)), ...(sha ? { sha } : {}) };
+    const res = await gh(env, `contents/${INDEX_PATH}`, { method: "PUT", body: JSON.stringify(body) });
+    if (res.ok) { indexCache = { at: Date.now(), list }; return list; }
+    if ((res.status === 409 || res.status === 422) && tries < 3) continue;
+    throw new Error(ghError(res.status));
+  }
+}
+
+async function readIndexCached(env) {
+  if (!indexCache.list || Date.now() - indexCache.at > INDEX_CACHE_MS) indexCache = { at: Date.now(), list: (await readIndex(env)).list };
+  return indexCache.list;
+}
+
 // Raw file contents, or null if it doesn't exist
 async function githubRead(env, path) {
   const res = await gh(env, `contents/${path}`, { headers: { Accept: "application/vnd.github.raw" } });
@@ -316,6 +426,16 @@ async function githubRead(env, path) {
 }
 
 // ---------- helpers ----------
+
+// The middle of the ~1 km grid square around a spot. Must stay the same as roughArea in
+// assets/app.js (scripts/check.js compares them).
+const AREA_DEG = 0.01;   // 0.01° of latitude ≈ 1.1 km
+function roughArea(lat, lon) {
+  const row = Math.floor(lat / AREA_DEG), rowLat = (row + 0.5) * AREA_DEG;
+  const lonStep = AREA_DEG / Math.max(0.2, Math.cos(rowLat * Math.PI / 180));   // squares stay ~1 km wide
+  const col = Math.floor(lon / lonStep);
+  return { lat: +rowLat.toFixed(4), lon: +((col + 0.5) * lonStep).toFixed(4) };
+}
 
 // VIEW_PATH as typed in Cloudflare, tolerating spaces, slashes or a whole pasted link
 function viewWord(env) {
@@ -443,6 +563,16 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 .login label { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .aibox { margin: -8px 0 18px; }
 .aiwarn { color: var(--alert); font-weight: 600; }
+/* Check level and Verify / Not a match buttons */
+.checkbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.level { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.level.unchecked { color: var(--muted); }
+.level.verified { color: #1f7a45; }
+.level.not_match { color: var(--alert); }
+.level.ai { color: #2f6fb3; }
+.checkbar button { font: 600 13px var(--body); padding: 6px 12px; border-radius: 999px; cursor: pointer; border: 1.5px solid #1f7a45; background: transparent; color: inherit; }
+.checkbar button.no { border-color: var(--alert); }
+.checkbar button:disabled { opacity: .5; cursor: progress; }
 </style>
 </head>
 <body>
@@ -487,6 +617,39 @@ function when(iso) {
   var m = Math.round((Date.now() - d) / 60000);
   var ago = m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " days ago";
   return { ago: ago, full: d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) };
+}
+
+function apiPost(path, body) {
+  return fetch("api/" + path, { method: "POST", headers: { "X-Password": password || "", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+var levels = {};   // report id -> check level, from the relay
+var LEVEL_TEXT = { unchecked: "Not checked yet", ai: "AI checked", verified: "Verified", not_match: "Not a match" };
+
+// The check level and the buttons to change it. Changing your mind? Tap the other button.
+function checkBar(r) {
+  var bar = el("div", "checkbar"), level = levels[r.id] || "unchecked";
+  bar.append(el("span", "level " + level, LEVEL_TEXT[level] || level));
+  function btn(text, cls, to) {
+    var b = el("button", cls, text); b.type = "button";
+    b.onclick = function (e) {
+      e.stopPropagation();
+      bar.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+      apiPost("check/" + r.id, { level: to }).then(function (res) {
+        if (res.status === 401) { showLogin("Wrong password."); return; }
+        if (!res.ok) throw new Error("Error " + res.status);
+        levels[r.id] = to; shownIds = ""; refresh();
+      }).catch(function (err) {
+        bar.querySelectorAll("button").forEach(function (x) { x.disabled = false; });
+        $("status").className = "status error"; $("status").textContent = "Couldn't save the check: " + err.message;
+      });
+    };
+    b.onkeydown = function (e) { e.stopPropagation(); };
+    bar.append(b);
+  }
+  if (level !== "verified") btn("Verify ✓", "yes", "verified");
+  if (level !== "not_match") btn("Not a match ✗", "no", "not_match");
+  if (level === "verified" || level === "not_match") btn("Undo", "", "unchecked");
+  return bar;
 }
 
 function api(path) {
@@ -537,6 +700,7 @@ function hero(r) {
   img.tabIndex = 0; img.title = "Show the whole photo";
   img.onclick = function () { openViewer(r); };
   img.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openViewer(r); } };
+  info.append(checkBar(r));
   card.append(img, info);
   return card;
 }
@@ -544,7 +708,7 @@ function hero(r) {
 function row(r) {
   var x = el("div", "row"), img = el("img"), what = el("div", "what");
   img.alt = ""; img.loading = "lazy"; photo(img, r.id);
-  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", detail(r) + " · "), aiSpan(r.id));
+  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", detail(r) + " · "), aiSpan(r.id), checkBar(r));
   x.append(img, what, el("span", "when", when(r.timestamp).full));
   x.tabIndex = 0; x.setAttribute("role", "button"); x.title = "Show the whole photo";
   x.onclick = function () { openViewer(r); };
@@ -561,7 +725,8 @@ async function refresh() {
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || ("Error " + res.status));
     $("login").hidden = true; $("logoutBox").hidden = false; $("aiBox").hidden = false;
-    var list = data.reports, ids = list.map(function (r) { return r.id; }).join();
+    levels = data.levels || {};
+    var list = data.reports, ids = list.map(function (r) { return r.id; }).join() + JSON.stringify(levels);
     lastList = list;
     if (ids !== shownIds) {
       shownIds = ids;

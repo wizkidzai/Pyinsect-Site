@@ -272,6 +272,30 @@ input[type=file] { display: none; }
 .flag.tree { background: var(--accent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent); }
 @media (prefers-color-scheme: dark) { .flag.tree { color: #0d1411; } }
 .card .tree-signs { margin: 0; font-size: 14px; }
+/* "Add my rough area" checkbox and the line on the result card */
+.area-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; align-self: flex-start; }
+.camera .area-toggle, .crop .area-toggle { margin: 0 8px; }
+.area-toggle input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.card .area-line { font-size: 13px; color: var(--muted); }
+
+/* Reports map: color key, map box, square counts, popups, and levels in "Your reports" */
+.map-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+.map-key li { display: inline-flex; align-items: center; gap: 6px; }
+.map-key .swatch { width: 14px; height: 14px; border-radius: 4px; opacity: .8; }
+.map-key .swatch.mine { background: transparent; border: 3px solid #8e44ad; }
+.reports-map-box { height: 380px; }
+/* .leaflet-marker-icon too, so this beats Leaflet's own styles (they load after ours) */
+.leaflet-marker-icon.map-count { display: block; text-align: center; line-height: 26px; border-radius: 50%; background: #fff; color: #15241b; font: 700 13px var(--body); box-shadow: 0 1px 4px rgba(0, 0, 0, .35); }
+.map-popup p { margin: 0 0 6px; color: #15241b; }
+.map-popup .map-level { font-weight: 600; }
+.map-popup .map-level.verified { color: #1f8a4c; }
+.map-popup .map-level.ai { color: #2f6fb3; }
+.map-popup .map-level.unchecked { color: #6b706d; }
+.map-popup .map-mine { color: #8e44ad; font-weight: 600; }
+.map-popup .map-note { font-size: 12px; color: #4d5d53; margin: 0; }
+.mine-level { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.mine-level.verified { color: var(--accent); }
+.mine-level.not_match { color: var(--alert); }
 
 /* "Your reports" and the full-photo viewer */
 .ledger-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }

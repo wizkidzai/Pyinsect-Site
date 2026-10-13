@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261012l">
+<link rel="stylesheet" href="assets/site.css?v=20261013e">
 </head>
 <body>
 <div class="wrap">
@@ -70,6 +70,7 @@
       <input id="zoom" type="range" min="1" max="4" step="0.1" value="1">
       <output id="zoomValue" for="zoom">1×</output>
     </div>
+    <label class="area-toggle"><input class="area-box" type="checkbox" checked> 📍 Add my rough area to my report (about 1 km)</label>
     <div class="camera-bar">
       <button id="closeCamera" class="btn" type="button">Close</button>
       <button id="shutter" class="shutter" type="button" aria-label="Take photo" disabled></button>
@@ -87,12 +88,31 @@
         <span class="handle" data-edge="sw"></span><span class="handle" data-edge="se"></span>
       </div>
     </div>
+    <label class="area-toggle"><input class="area-box" type="checkbox" checked> 📍 Add my rough area to my report (about 1 km)</label>
     <div class="crop-bar">
       <button id="cropCancel" class="btn" type="button">Cancel</button>
       <button id="cropRetake" class="btn" type="button">Retake</button>
       <button id="cropWhole" class="btn" type="button">Whole photo</button>
       <button id="checkIt" class="btn primary" type="button" disabled>Check it</button>
     </div>
+  </section>
+
+  <section class="ledger reports-map" id="reportsMapSection" aria-labelledby="reportsMapTitle">
+    <div class="ledger-head">
+      <h2 id="reportsMapTitle">🗺️ Reports map</h2>
+    </div>
+    <p class="hint">Invasive bugs and tree damage reported by everyone, in squares about 1 km wide. No photos and no exact spots are ever shown.</p>
+    <ul class="map-key" aria-label="What the colors mean">
+      <li><span class="swatch" style="background:#1f8a4c"></span>Verified: a person on our team checked it</li>
+      <li><span class="swatch" style="background:#2f6fb3"></span>AI checked: an AI thinks it's a match</li>
+      <li><span class="swatch" style="background:#8a8f8c"></span>Not checked yet</li>
+      <li><span class="swatch mine"></span>Your reports (only you see these)</li>
+    </ul>
+    <div class="actions">
+      <button id="showReportsMap" class="btn" type="button">Show the map</button>
+      <span id="reportsMapMsg" class="muted" role="status"></span>
+    </div>
+    <div id="reportsMap" class="catch-map reports-map-box" hidden></div>
   </section>
 
   <section class="game" id="game" aria-label="Innvadex game">
@@ -145,7 +165,7 @@
       <h2>Your reports</h2>
       <span id="mineCount" class="status"></span>
     </div>
-    <p class="hint">Invasive finds sent from this tab. Tap one to see the whole photo.</p>
+    <p class="hint">Reports sent from this phone. They stay here, even after you close the browser. Tap one to see its photo.</p>
     <div id="mine" class="rows"></div>
   </section>
 
@@ -176,9 +196,10 @@
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261012e"></script>
+<script src="assets/app.js?v=20261013e"></script>
 <script src="assets/trees/ash.js?v=20261012l"></script>
-<script src="assets/treecheck.js?v=20261012l"></script>
+<script src="assets/treecheck.js?v=20261013e"></script>
+<script src="assets/reportsmap.js?v=20261013c"></script>
 <script src="assets/game.js?v=20261011c"></script>
 </body>
 </html>
