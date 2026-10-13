@@ -190,43 +190,73 @@ To add one, ask your AI helper to help you plan a new feature. It will use
 
 ## Reports map
 
-- **Status:** Planned
-- **Asked by:** Eshan, 2026-10-12
+- **Status:** Building
+- **Asked by:** Eshan, 2026-10-12 (updated 2026-10-13: show other people's reports, with checking)
 - **Who it's for:** Anyone who visits the app, especially biologists who study invasive species,
   nature clubs, and backyard owners.
-- **Problem or need:** They want to see where invasive species have been reported, and to look
-  back at their own past reports.
+- **Problem or need:** They want to see where invasive bugs and tree damage have been reported
+  by everyone, which reports have been checked by a person, and their own past reports.
 - **Why they have it:** Biologists need to know where invasive species are so they can track
-  them and place traps. Nature clubs want to help and tell others. Today, reports have no
-  location, and "Your reports" disappears when you close the tab.
+  them and place traps. Nature clubs want to help and tell others. Backyard owners want to know
+  if something was found near them. Today, reports have no location, nobody but our team can
+  see them, and "Your reports" disappears when you close the tab.
 - **Our idea:**
-  - When a report is sent, a checkbox says **Add my rough area to the map (about 1 km)**. It's
-    ticked at first, and people can untick it. The browser also asks before sharing a location.
+  - **Rough area:** a checkbox **📍 Add my rough area to my reports (about 1 km)** on the home
+    page card and on the tree check's photo step. It's ticked at first, people can untick it,
+    and the phone remembers their choice. The browser also asks before sharing a location.
   - The location is rounded **on the phone** to about a 1 km square before it's sent, so the
     exact spot never leaves the phone and nobody can find someone's house.
-  - **Reports map:** colored squares with a count ("3 reports here"), not pins. It shows only the
-    kind of bug or damage, the rough area, and the month. **No photos.** Every report says
-    "possible", because no expert has checked it yet.
-  - **My reports:** a list of the reports sent from this phone. When you open the app again
-    later, they're still there. They're saved only on this phone (not on other phones).
-  - The relay gets a new public list with only those safe details. Photos stay private. A
-    grown-up needs to redeploy the relay.
+  - **Checking reports:** on the team's password-protected reports page, a team member looks at
+    each report and taps **Verify ✓** or **Not a match ✗**. Anyone with the team reports
+    password can do this.
+  - **Three levels,** so an AI can help later without redoing the map:
+    - ⚪ **Not checked yet:** just sent.
+    - 🔵 **AI checked:** an AI thinks it's a match. Not built now; only after a grown-up
+      approves an AI service.
+    - 🟢 **Verified:** a person on our team confirmed it.
+    - "Not a match" reports are taken off the public map.
+  - **Reports map (public, anyone can see it):** colored squares about 1 km big with a count,
+    not pins. Tap one to see what was found there, the month, and how well it was checked.
+    Bugs and tree damage both show. **No photos and no exact spots.**
+  - **My reports:** the reports sent from this phone, with their check level. When you open the
+    app again later, they're still there. They're saved only on this phone. On the map, your
+    own reports show in their own color, but only on your phone.
+  - The relay gets a public list with only those safe details (what, rough square, month, check
+    level). Photos stay private. A grown-up needs to redeploy the relay.
   - The map uses Leaflet, the same map tool as the game's map.
 - **Other ideas we talked about:**
   - A pin for each report: could show where someone lives.
   - A map only for our team: biologists and nature clubs need to see it too.
+  - Showing only verified reports: we chose to show everything, but clearly marked, so the map
+    isn't empty while the team checks.
+  - An AI that verifies right away: AI can be wrong, and it would send photos to an AI company
+    with a secret key and costs. Saved for later, as the "AI checked" level.
+  - A separate password for verifying: one more secret to set up; the team password is enough.
   - A box that starts unticked: the team chose ticked so more reports have an area, and
     people can still untick it.
 - **User flow:**
-  1. Take a photo. The report screen shows **Add my rough area to the map**, already ticked.
-  2. Leave it ticked → the browser asks for location → Allow → the report is sent with a rough
-     area. Untick it or tap Don't allow → the report is sent without an area.
-  3. Open **Reports map**. See squares with counts. Tap one to see "3 possible emerald ash borer
-     reports, October 2026".
-  4. Come back another day and open **My reports**. The reports this phone sent are still there.
+  - **Someone sending a report:**
+    1. Open the app. The 📍 rough area box is ticked. Take or pick a photo.
+    2. When a report is sent, the browser asks for location the first time → Allow → the
+       report goes with a rough 1 km square. Untick the box or tap Don't allow → it goes
+       without an area (and doesn't show on the map).
+  - **A team member checking:**
+    1. Open the team reports page and log in with the team password.
+    2. Look at a report's photo, then tap **Verify ✓** or **Not a match ✗**. Changed your mind?
+       Tap the other one.
+  - **Anyone looking at the map:**
+    1. Open **Reports map**. See squares in three colors with counts, and a key that explains
+       the colors.
+    2. Tap a square: "2 Emerald ash borer damage, verified · 1 not checked yet · October 2026".
+  - **Coming back later:** open **My reports**. The reports this phone sent are still there,
+    each with "Not checked yet", "Verified ✓", or "Not a match".
 - **Done when:**
-  - [ ] Send a report with the box ticked, and a square shows up on the map near you, but not
-        on your exact spot.
+  - [ ] Send a report with the box ticked, and a square shows up on the map near you (marked
+        "not checked yet"), but not on your exact spot.
   - [ ] Untick the box, send a report, and it doesn't show up on the map.
-  - [ ] Close the browser, open the app again, and **My reports** still lists your reports.
+  - [ ] Verify it on the team page, and the square on the map turns green ("verified").
+  - [ ] Mark one "Not a match", and it disappears from the public map.
+  - [ ] Someone on another phone sees the verified report on the map too.
+  - [ ] Close the browser, open the app again, and **My reports** still lists your reports with
+        their check level.
   - [ ] The map never shows photos or exact spots.
