@@ -28,6 +28,8 @@ Kids in elementary and middle school. Please:
 | `assets/site.css` | Colors, fonts, and layout |
 | `assets/species.js` | Common names for each insect |
 | `assets/models/` | Settings for each model version, like the invasive list |
+| `assets/trees/` | Settings for the tree check: the questions, pictures, and words for each tree |
+| `assets/treecheck.js` | Shows the tree check questions, using the files in `assets/trees/` |
 | `model/` | The trained AI models (`.onnx` files) |
 | `relay/worker.js` | Runs on Cloudflare and saves reports |
 | `scripts/check.js` | Checks for mistakes. Run `node scripts/check.js` before sharing work |
@@ -66,7 +68,8 @@ The shared skills read this section, so keep it up to date.
 3. **Reports stay private.** Never save insect reports or photos in this repo.
 4. **Don't touch the `model/` files** unless a grown-up says it's okay. They are big and important.
 5. **The invasive list lives in two places:** `assets/models/` and `relay/worker.js`. If you
-   change one, change the other too.
+   change one, change the other too. The same goes for tree checks: each `assets/trees/` file
+   needs a matching entry in `TREE_CHECKS` in `relay/worker.js`.
 6. **Make it kind and easy.** Messages people see should be friendly and simple.
 7. **Use `skills/shared/devops/SKILL.md` for setup, testing, git, GitHub, and deploying.** Each
    kid works on their own branch. A grown-up reviews and merges every pull request. Never push to `main`.

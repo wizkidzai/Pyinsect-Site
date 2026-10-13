@@ -25,6 +25,11 @@ const INVASIVE = new Set([
   "fire_ant", "formosan_termite", "japanese_beetle", "oriental_beetle", "rose_chafer",
   "spongy_moth", "spotted_lanternfly",
 ]);
+// Tree check reports (the "Help me check my tree" questions on the site). Must match the tree
+// settings files, assets/trees/*.js: the tree id, its pest, and the id and sign of each question.
+const TREE_CHECKS = {
+  ash: { tree: "Ash tree", pest: "emerald ash borer", signs: { holes: "D-shaped holes", galleries: "wavy lines (galleries)" } },
+};
 // Where reports are saved. Fixed here (not a Cloudflare setting) because the setting kept pointing
 // at the public site repo. Must stay a PRIVATE repo; the relay refuses to save anywhere public.
 const REPORTS_REPO = "edafawd/pyinsect-reports-data";
@@ -72,7 +77,7 @@ async function submit(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 8, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 9, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   const origin = request.headers.get("Origin");
@@ -101,7 +106,8 @@ async function submit(request, env) {
   try {
     // Photo first, so the reports page only lists a report once its photo exists
     await githubCreate(env, `reports/${report.id}.jpg`, photo, `Photo for ${report.name} report`);
-    await githubCreate(env, `reports/${report.id}.json`, toBase64(JSON.stringify(report, null, 1)), `Invasive species report: ${report.name}`);
+    await githubCreate(env, `reports/${report.id}.json`, toBase64(JSON.stringify(report, null, 1)),
+      `${report.kind === "tree" ? "Tree check report" : "Invasive species report"}: ${report.name}`);
   } catch (e) {
     return reply(502, { error: e.message });
   }
@@ -109,7 +115,9 @@ async function submit(request, env) {
   return reply(201, { ok: true, id: report.id });
 }
 
-// Accepts only well-formed invasive reports and rebuilds them from known fields
+// Accepts only well-formed reports and rebuilds them from known fields. Two kinds:
+//   invasive (no kind): the bug model found an invasive species
+//   "tree": a photo from the tree check, with the signs the person said they saw
 function checkReport(body) {
   const r = body && body.report, photo = body && body.photo;
   if (!r || typeof r !== "object") return { error: "Missing report." };
@@ -120,14 +128,26 @@ function checkReport(body) {
   if (isNaN(when) || when > Date.now() + 3600000 || when < Date.now() - MAX_AGE_DAYS * 86400000) {
     return { error: "Report time is out of range." };
   }
-  if (!INVASIVE.has(r.species)) return { error: "Only invasive species are reported." };
+  // hasOwn: only trees really in the list (not hidden names like "__proto__" that every object has)
+  const tree = r.kind === "tree" && typeof r.tree === "string" && Object.hasOwn(TREE_CHECKS, r.tree) ? TREE_CHECKS[r.tree] : null;
+  if (r.kind === "tree") {
+    if (!tree) return { error: "Unknown tree check." };
+    if (!Array.isArray(r.signs) || r.signs.length > Object.keys(tree.signs).length
+        || !r.signs.every((s, i) => Object.hasOwn(tree.signs, s) && r.signs.indexOf(s) === i)) {
+      return { error: "Bad list of signs." };
+    }
+  } else if (r.kind !== undefined) {
+    return { error: "Unknown kind of report." };
+  } else if (!INVASIVE.has(r.species)) {
+    return { error: "Only invasive species are reported." };
+  }
   if (typeof r.timestamp !== "string" || !TIMESTAMP_RE.test(r.timestamp)) return { error: "Bad timestamp." };
   const pct = v => typeof v === "number" && v >= 0 && v <= 100;
-  if (!pct(r.confidence)) return { error: "Bad confidence." };
-  if (!Array.isArray(r.top3) || r.top3.length < 1 || r.top3.length > 3
-      || !r.top3.every(t => t && SPECIES_RE.test(t.species) && pct(t.confidence))) {
-    return { error: "Bad top-3 list." };
-  }
+  if (!tree && !pct(r.confidence)) return { error: "Bad confidence." };
+  // Tree reports may send the bug model's guesses too (as extra help for the team), or none
+  const top3Ok = Array.isArray(r.top3) && r.top3.length <= 3 && (tree || r.top3.length >= 1)
+    && r.top3.every(t => t && SPECIES_RE.test(t.species) && pct(t.confidence));
+  if (!top3Ok && !(tree && r.top3 === undefined)) return { error: "Bad top-3 list." };
 
   if (typeof photo !== "string" || photo.length > MAX_PHOTO_BYTES * 4 / 3 + 4) return { error: "Photo missing or too large." };
   let bytes;
@@ -142,6 +162,27 @@ function checkReport(body) {
     const t = typeof v === "string" ? v.replace(/[^\p{L}\p{N} '().,-]/gu, "").trim().slice(0, 60) : "";
     return t || niceName(species);
   };
+  const top3 = (r.top3 || []).map(t => ({ species: t.species, name: label(t.name, t.species), confidence: t.confidence }));
+  if (tree) {
+    // The name is made here, never taken from the site, so it's always one of these two
+    return {
+      photo,
+      report: {
+        id: r.id,
+        timestamp: r.timestamp,
+        kind: "tree",
+        tree: r.tree,
+        name: r.signs.length ? `Possible ${tree.pest} damage` : `${tree.tree} to check`,
+        signs: r.signs,
+        signs_text: r.signs.length ? r.signs.map(s => tree.signs[s]).join(", ") : "None. They were still worried and sent a photo.",
+        pest: tree.pest,
+        top3,
+        photo: `${r.id}.jpg`,
+        model: short(r.model, 40),
+        app_version: short(r.app_version, 20),
+      },
+    };
+  }
   return {
     photo,
     report: {
@@ -151,7 +192,7 @@ function checkReport(body) {
       name: label(r.name, r.species),
       scientific: label(r.scientific, r.species),
       confidence: r.confidence,
-      top3: r.top3.map(t => ({ species: t.species, name: label(t.name, t.species), confidence: t.confidence })),
+      top3,
       photo: `${r.id}.jpg`,
       model: short(r.model, 40),
       app_version: short(r.app_version, 20),
@@ -408,7 +449,7 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 <div class="wrap">
   <header>
     <span class="eyebrow">Pyinsect field reports · private</span>
-    <h1>Latest invasive find</h1>
+    <h1>Latest report</h1>
     <span id="status" class="status">Loading…</span>
   </header>
 
@@ -466,19 +507,24 @@ function getPhoto(id) {
 }
 function photo(img, id) { getPhoto(id).then(function () { img.src = photoUrls[id]; }, function () {}); }
 
+// Tree check reports (kind "tree") have the signs the person saw instead of a confidence
+function isTree(r) { return r.kind === "tree"; }
+function detail(r) { return isTree(r) ? "Signs seen: " + (r.signs_text || "none") : Number(r.confidence).toFixed(1) + "% confidence"; }
+
 function hero(r) {
   var card = el("article", "hero"), img = el("img"), info = el("div", "info");
   img.alt = "Photo of the reported " + r.name; photo(img, r.id);
-  info.append(el("span", "flag", "Invasive"), el("p", "species", r.name || niceName(r.species)));
-  if (r.scientific && r.scientific !== r.name) info.append(el("span", "sci", r.scientific));
+  info.append(el("span", "flag", isTree(r) ? "Tree check" : "Invasive"), el("p", "species", r.name || niceName(r.species)));
+  if (isTree(r) && r.pest) info.append(el("span", "sci", "Looking for signs of the " + r.pest));
+  else if (r.scientific && r.scientific !== r.name) info.append(el("span", "sci", r.scientific));
   var w = when(r.timestamp), facts = el("dl", "facts");
-  [["Reported", w.ago + " · " + w.full], ["Confidence", Number(r.confidence).toFixed(1) + "%"], ["Model", r.model || "—"], ["Report", r.id]]
+  [["Reported", w.ago + " · " + w.full], isTree(r) ? ["Signs seen", r.signs_text || "none"] : ["Confidence", Number(r.confidence).toFixed(1) + "%"], ["Model", r.model || "—"], ["Report", r.id]]
     .forEach(function (kv) { facts.append(el("dt", null, kv[0]), el("dd", null, kv[1])); });
   var dd = el("dd"); dd.append(aiSpan(r.id));
   facts.append(el("dt", null, "AI check"), dd);
   info.append(facts);
   if (Array.isArray(r.top3) && r.top3.length) {
-    info.append(el("span", "eyebrow", "Model's top guesses"));
+    info.append(el("span", "eyebrow", isTree(r) ? "Bug model's guesses (only useful if a bug is in the photo)" : "Model's top guesses"));
     var alts = el("div", "alts");
     r.top3.forEach(function (a) {
       var row = el("div", "alt"), track = el("div", "track"), fill = el("div", "fill");
@@ -498,7 +544,7 @@ function hero(r) {
 function row(r) {
   var x = el("div", "row"), img = el("img"), what = el("div", "what");
   img.alt = ""; img.loading = "lazy"; photo(img, r.id);
-  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", Number(r.confidence).toFixed(1) + "% confidence · "), aiSpan(r.id));
+  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", detail(r) + " · "), aiSpan(r.id));
   x.append(img, what, el("span", "when", when(r.timestamp).full));
   x.tabIndex = 0; x.setAttribute("role", "button"); x.title = "Show the whole photo";
   x.onclick = function () { openViewer(r); };
@@ -520,7 +566,7 @@ async function refresh() {
     if (ids !== shownIds) {
       shownIds = ids;
       var box = $("latest"); box.innerHTML = "";
-      if (!list.length) box.append(el("div", "empty", "No invasive insects have been reported yet. New reports appear here within seconds."));
+      if (!list.length) box.append(el("div", "empty", "No reports yet. New invasive finds and tree checks appear here within seconds."));
       else box.append(hero(list[0]));
       var earlier = $("earlier"); earlier.innerHTML = "";
       list.slice(1).forEach(function (r) { earlier.append(row(r)); });
@@ -577,9 +623,9 @@ function openViewer(r) {
   photo(img, r.id);
   var cap = $("viewerCaption"); cap.innerHTML = "";
   cap.append(el("strong", null, r.name || niceName(r.species)));
-  if (r.scientific && r.scientific !== r.name) cap.append(el("em", null, r.scientific));
+  if (!isTree(r) && r.scientific && r.scientific !== r.name) cap.append(el("em", null, r.scientific));
   var w = when(r.timestamp);
-  cap.append(el("span", null, Number(r.confidence).toFixed(1) + "% · " + w.full + " · " + (r.model || "")));
+  cap.append(el("span", null, detail(r) + " · " + w.full + " · " + (r.model || "")));
   var ai = aiSpan(r.id); if (ai.textContent) cap.append(ai);
   $("viewer").hidden = false;
   document.body.style.overflow = "hidden";

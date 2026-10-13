@@ -58,6 +58,32 @@ const listIn = (text, start) => {
     "add the species to both lists (see rule 5 in AGENTS.md), or fix the size in the model settings file.");
 }
 
+// 2b. The tree checks match: each assets/trees/*.js file is in TREE_CHECKS in relay/worker.js, with
+// the same pest and the same question ids (the relay refuses reports with signs it doesn't know)
+{
+  const vm = require("vm");
+  const problems = [];
+  const worker = fs.readFileSync("relay/worker.js", "utf8");
+  const start = worker.indexOf("const TREE_CHECKS = ");
+  let relayTrees = {};
+  try { relayTrees = vm.runInNewContext("(" + worker.slice(start + 20, worker.indexOf("\n};", start) + 2) + ")"); }
+  catch { problems.push("couldn't read TREE_CHECKS in relay/worker.js"); }
+  for (const f of files.filter(f => /^assets\/trees\/.*\.js$/.test(f))) {
+    const sandbox = { window: {} };
+    try { vm.runInNewContext(fs.readFileSync(f, "utf8"), sandbox); }
+    catch (e) { problems.push(`${f}: ${e.message}`); continue; }
+    for (const t of sandbox.window.PYINSECT_TREES || []) {
+      const r = relayTrees[t.id];
+      if (!r) { problems.push(`"${t.id}" in ${f} is missing from TREE_CHECKS in relay/worker.js`); continue; }
+      if (r.pest !== t.pest) problems.push(`${f} says the pest is "${t.pest}", but relay/worker.js says "${r.pest}"`);
+      const ids = t.questions.map(q => q.id).sort().join(), relayIds = Object.keys(r.signs).sort().join();
+      if (ids !== relayIds) problems.push(`${f} has questions [${ids}], but relay/worker.js has signs [${relayIds}]`);
+    }
+  }
+  report("Tree checks match the relay", problems,
+    "make TREE_CHECKS in relay/worker.js match the tree settings file (see rule 5 in AGENTS.md). A grown-up then redeploys the relay.");
+}
+
 // 3. No secrets (this code is public)
 {
   const SECRET = new RegExp([
