@@ -439,6 +439,7 @@ async function startCamera() {
     await video.play();
     video.classList.toggle("mirror", facing === "user");
     cameraMessage("");
+    setupZoom();
     $("shutter").disabled = false;
     $("useCameraApp").hidden = true;
     const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput");
@@ -459,6 +460,86 @@ function stopStream() {
   if (stream) stream.getTracks().forEach(t => t.stop());
   stream = null;
   $("cameraVideo").srcObject = null;
+  resetZoom();
+}
+
+// ---------- camera zoom ----------
+// Pinch the viewfinder, use the slider, or pinch a laptop trackpad. When the browser lets us
+// control the camera's own zoom, we use it (sharpest). Otherwise we use "digital zoom": the
+// preview is enlarged and takePhoto keeps only the middle of the picture.
+const DIGITAL_ZOOM_MAX = 4, REAL_ZOOM_MAX = 10;   // past these, photos get too blurry to identify
+let zoom = 1, realZoom = null;   // realZoom = the camera's own zoom range, when it has one
+
+function setupZoom() {
+  if (!$("zoom")) return;   // pages without the zoom slider (like 2.7/)
+  const track = stream.getVideoTracks()[0];
+  const range = track.getCapabilities?.().zoom;
+  realZoom = range && range.max > range.min ? range : null;
+  const slider = $("zoom");
+  slider.min = realZoom ? realZoom.min : 1;
+  slider.max = realZoom ? Math.min(realZoom.max, REAL_ZOOM_MAX) : DIGITAL_ZOOM_MAX;
+  slider.step = realZoom?.step || 0.1;
+  $("cameraVideo").style.setProperty("--zoom", 1);
+  setZoom(realZoom ? track.getSettings().zoom ?? realZoom.min : 1);
+  $("zoomBar").hidden = false;
+}
+
+function resetZoom() {
+  zoom = 1; realZoom = null;
+  $("cameraVideo").style.removeProperty("--zoom");
+  if ($("zoomBar")) $("zoomBar").hidden = true;
+}
+
+function setZoom(value) {
+  if (!stream || !$("zoom")) return;
+  const slider = $("zoom");
+  zoom = Math.min(Math.max(value, +slider.min), +slider.max);
+  slider.value = zoom;
+  $("zoomValue").textContent = `${+zoom.toFixed(1)}×`;
+  if (realZoom) applyRealZoom();
+  else $("cameraVideo").style.setProperty("--zoom", zoom);
+}
+
+// Asking the camera to zoom takes a moment. While it's busy, only the newest zoom is kept,
+// so a fast pinch doesn't pile up dozens of requests.
+let zoomBusy = false;
+async function applyRealZoom() {
+  if (zoomBusy) return;
+  zoomBusy = true;
+  let done = null;
+  while (stream && realZoom && done !== zoom) {
+    done = zoom;
+    try { await stream.getVideoTracks()[0].applyConstraints({ advanced: [{ zoom: done }] }); }
+    catch { break; }
+  }
+  zoomBusy = false;
+}
+
+if ($("zoom")) {
+  $("zoom").oninput = e => setZoom(+e.target.value);
+  // Two-finger pinch: zoom grows or shrinks by how much the fingers spread apart
+  const viewfinder = document.querySelector(".viewfinder"), fingers = new Map();
+  let pinch = null;
+  const spread = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+  viewfinder.addEventListener("pointerdown", e => {
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size === 2) pinch = { spread: spread(), zoom };
+  });
+  viewfinder.addEventListener("pointermove", e => {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && fingers.size === 2) setZoom(pinch.zoom * spread() / pinch.spread);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t => viewfinder.addEventListener(t, e => {
+    fingers.delete(e.pointerId);
+    if (fingers.size < 2) pinch = null;
+  }));
+  // Laptop trackpads send a pinch as a mouse wheel with the Ctrl key held
+  viewfinder.addEventListener("wheel", e => {
+    if (!e.ctrlKey || !stream) return;
+    e.preventDefault();
+    setZoom(zoom * Math.exp(-e.deltaY / 100));
+  }, { passive: false });
 }
 
 function openCamera() {
@@ -477,9 +558,12 @@ function closeCamera() {
 function takePhoto() {
   const video = $("cameraVideo");
   if (!stream || !video.videoWidth) return;
+  // Digital zoom: keep only the middle part. (The camera's own zoom is already in the picture.)
+  const z = realZoom ? 1 : zoom, vw = video.videoWidth, vh = video.videoHeight;
+  const w = Math.round(vw / z), h = Math.round(vh / z);
   const c = document.createElement("canvas");
-  c.width = video.videoWidth; c.height = video.videoHeight;
-  c.getContext("2d").drawImage(video, 0, 0);
+  c.width = w; c.height = h;
+  c.getContext("2d").drawImage(video, (vw - w) / 2, (vh - h) / 2, w, h, 0, 0, w, h);
   $("cameraFlash").classList.remove("go"); void $("cameraFlash").offsetWidth; $("cameraFlash").classList.add("go");
   c.toBlob(blob => {
     if (!blob) return;

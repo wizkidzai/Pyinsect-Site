@@ -149,10 +149,15 @@ input[type=file] { display: none; }
 @media (prefers-reduced-motion: reduce) { .status.busy .dot { animation: none; } .btn, .tray { transition: none; } }
 
 .camera { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 28px; scroll-margin-top: 12px; }
-.viewfinder { position: relative; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 3 / 4; max-height: 70vh; width: 100%; }
+/* touch-action: none lets two fingers pinch-zoom the camera instead of the whole page */
+.viewfinder { position: relative; border-radius: 20px; overflow: hidden; background: #000; aspect-ratio: 3 / 4; max-height: 70vh; width: 100%; touch-action: none; }
 @media (min-width: 601px) { .viewfinder { aspect-ratio: 4 / 3; } }
-.viewfinder video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.viewfinder video.mirror { transform: scaleX(-1); }
+/* --zoom is the digital zoom (set by app.js); it stays 1 when the camera zooms by itself */
+.viewfinder video { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(var(--zoom, 1)); }
+.viewfinder video.mirror { transform: scaleX(-1) scale(var(--zoom, 1)); }
+.zoom-bar { display: flex; align-items: center; gap: 12px; padding: 0 8px; font-size: 14px; }
+.zoom-bar input { flex: 1; min-width: 0; height: 32px; accent-color: var(--accent); cursor: pointer; }
+.zoom-bar output { font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 3.5em; text-align: right; }
 .flash { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: #fff; opacity: 0; pointer-events: none; }
 .flash.go { animation: flash .35s ease-out; }
 @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
