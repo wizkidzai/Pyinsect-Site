@@ -231,11 +231,51 @@ function sendPending() {
   return sending;
 }
 
+// ---------- rough area ----------
+// Reports can carry a rough area for the reports map: the middle of a grid square about 1 km wide.
+// The exact spot never leaves the phone. The relay rounds it to the same grid again (roughArea in
+// relay/worker.js must stay the same as this).
+const AREA_KEY = "pyinsect.shareArea", AREA_DEG = 0.01;   // 0.01° of latitude ≈ 1.1 km
+function roughArea(lat, lon) {
+  const row = Math.floor(lat / AREA_DEG), rowLat = (row + 0.5) * AREA_DEG;
+  const lonStep = AREA_DEG / Math.max(0.2, Math.cos(rowLat * Math.PI / 180));   // squares stay ~1 km wide
+  const col = Math.floor(lon / lonStep);
+  return { lat: +rowLat.toFixed(4), lon: +((col + 0.5) * lonStep).toFixed(4) };
+}
+// Ticked unless they unticked it. Pages without the checkbox (like 2.7/) never send an area.
+const shareArea = () => !!document.querySelector(".area-box") && store.get(AREA_KEY, true);
+let areaCache = null;   // { area, at }: one location ask is reused for 10 minutes
+
+// The rough area, or null (box unticked, location blocked, or no answer within 10 seconds)
+function getArea() {
+  if (!shareArea() || !navigator.geolocation) return Promise.resolve(null);
+  if (areaCache && Date.now() - areaCache.at < 600000) return Promise.resolve(areaCache.area);
+  return new Promise(resolve => navigator.geolocation.getCurrentPosition(
+    pos => { areaCache = { area: roughArea(pos.coords.latitude, pos.coords.longitude), at: Date.now() }; resolve(areaCache.area); },
+    () => resolve(null),
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }));
+}
+
+// Every "rough area" checkbox on the page (home card, tree check photo step) shows the same setting
+function wireAreaBox(box) {
+  box.checked = shareArea();
+  box.onchange = () => {
+    store.set(AREA_KEY, box.checked);
+    document.querySelectorAll(".area-box").forEach(b => { b.checked = box.checked; });
+  };
+}
+document.querySelectorAll(".area-box").forEach(wireAreaBox);
+
 // r = a report from buildReport or buildTreeReport. detail = the small line under it in "Your reports".
-function fileReport(r, card, detail) {
+// The rough area is added first (the browser may ask about location the first time).
+async function fileReport(r, card, detail) {
   const line = el("span", "sent", "");
   card.querySelector(".info").append(line);
   if (!RELAY_URL) { line.textContent = "Not reported: the report server isn't set up yet."; return; }
+  line.textContent = shareArea() ? "Adding your rough area…" : "Sending report…";
+  const area = await getArea();
+  if (area) r.report.area = area;
+  card.querySelector(".info").append(el("span", "area-line", area ? "📍 Rough area added (about 1 km)" : "📍 Sent without an area, so it won't show on the map"));
   line.dataset.report = r.report.id;
   line.textContent = "Sending report…";
   addMine(r, detail);
@@ -324,8 +364,8 @@ function smallPhoto(base64) {
 // Added right away (so its "Reported" status can't get lost); the small photo follows a moment later
 function addMine({ report, photo }, detail) {
   const list = mine.get().filter(m => m.id !== report.id);
-  list.unshift({ id: report.id, name: report.name, detail: detail || mineDetail(report),
-    timestamp: report.timestamp, model: report.model, photo: null, status: "Sending report…", ok: false });
+  list.unshift({ id: report.id, name: report.name, detail: detail || mineDetail(report), kind: report.kind || "invasive",
+    area: report.area || null, timestamp: report.timestamp, model: report.model, photo: null, status: "Sending report…", ok: false });
   mine.set(list.slice(0, MINE_MAX));
   renderMine();
   if (photo) smallPhoto(photo).then(small => { if (small) updateMine(report.id, { photo: small }); });

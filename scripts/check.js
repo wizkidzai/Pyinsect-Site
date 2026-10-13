@@ -84,6 +84,27 @@ const listIn = (text, start) => {
     "make TREE_CHECKS in relay/worker.js match the tree settings file (see rule 5 in AGENTS.md). A grown-up then redeploys the relay.");
 }
 
+// 2c. The rough area grid (reports map) is the same on the site and the relay: both must round a
+// spot to the same ~1 km square, or the map would put reports in the wrong place
+{
+  const vm = require("vm");
+  const problems = [];
+  const load = f => {
+    const text = fs.readFileSync(f, "utf8"), deg = text.match(/AREA_DEG = ([\d.]+)/), at = text.indexOf("function roughArea(");
+    if (!deg || at < 0) { problems.push(`${f}: couldn't find AREA_DEG and roughArea`); return null; }
+    return vm.runInNewContext(`const AREA_DEG = ${deg[1]}; ${text.slice(at, text.indexOf("\n}\n", at) + 2)}; roughArea`);
+  };
+  const site = load("assets/app.js"), relay = load("relay/worker.js");
+  if (site && relay) {
+    for (const [lat, lon] of [[45.5231, -122.6765], [44.0521, -123.0868], [-33.8688, 151.2093], [0.004, 0.004], [89.99, 179.99], [-89.99, -179.99]]) {
+      const a = JSON.stringify(site(lat, lon)), b = JSON.stringify(relay(lat, lon));
+      if (a !== b) problems.push(`spot ${lat}, ${lon}: the site says ${a}, the relay says ${b}`);
+    }
+  }
+  report("Rough area grid matches the relay", problems,
+    "make roughArea and AREA_DEG in assets/app.js and relay/worker.js exactly the same. A grown-up then redeploys the relay.");
+}
+
 // 3. No secrets (this code is public)
 {
   const SECRET = new RegExp([

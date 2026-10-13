@@ -149,6 +149,15 @@ function checkReport(body) {
     && r.top3.every(t => t && SPECIES_RE.test(t.species) && pct(t.confidence));
   if (!top3Ok && !(tree && r.top3 === undefined)) return { error: "Bad top-3 list." };
 
+  // Rough area for the reports map (optional). Rounded to the ~1 km grid again here, so even a
+  // changed site can't save an exact spot.
+  let area = null;
+  if (r.area !== undefined && r.area !== null) {
+    const { lat, lon } = r.area || {};
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return { error: "Bad area." };
+    area = roughArea(lat, lon);
+  }
+
   if (typeof photo !== "string" || photo.length > MAX_PHOTO_BYTES * 4 / 3 + 4) return { error: "Photo missing or too large." };
   let bytes;
   try { bytes = atob(photo); } catch { return { error: "Photo isn't valid base64." }; }
@@ -175,6 +184,7 @@ function checkReport(body) {
         name: r.signs.length ? `Possible ${tree.pest} damage` : `${tree.tree} to check`,
         signs: r.signs,
         signs_text: r.signs.length ? r.signs.map(s => tree.signs[s]).join(", ") : "None. They were still worried and sent a photo.",
+        ...(area ? { area } : {}),
         pest: tree.pest,
         top3,
         photo: `${r.id}.jpg`,
@@ -193,6 +203,7 @@ function checkReport(body) {
       scientific: label(r.scientific, r.species),
       confidence: r.confidence,
       top3,
+      ...(area ? { area } : {}),
       photo: `${r.id}.jpg`,
       model: short(r.model, 40),
       app_version: short(r.app_version, 20),
@@ -316,6 +327,16 @@ async function githubRead(env, path) {
 }
 
 // ---------- helpers ----------
+
+// The middle of the ~1 km grid square around a spot. Must stay the same as roughArea in
+// assets/app.js (scripts/check.js compares them).
+const AREA_DEG = 0.01;   // 0.01° of latitude ≈ 1.1 km
+function roughArea(lat, lon) {
+  const row = Math.floor(lat / AREA_DEG), rowLat = (row + 0.5) * AREA_DEG;
+  const lonStep = AREA_DEG / Math.max(0.2, Math.cos(rowLat * Math.PI / 180));   // squares stay ~1 km wide
+  const col = Math.floor(lon / lonStep);
+  return { lat: +rowLat.toFixed(4), lon: +((col + 0.5) * lonStep).toFixed(4) };
+}
 
 // VIEW_PATH as typed in Cloudflare, tolerating spaces, slashes or a whole pasted link
 function viewWord(env) {
