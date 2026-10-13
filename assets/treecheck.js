@@ -97,7 +97,7 @@ function reported() {
 // tree settings file and can be left out.
 function photoRow(photos, credit) {
   if (!photos?.length) return [];
-  const row = el("div", "tree-photos");
+  const row = el("div", "tree-photos" + (photos.length === 1 ? " one" : ""));   // one photo: full width
   for (const p of photos) {
     const fig = el("figure"), img = el("img");
     img.src = p.src; img.alt = p.alt; img.loading = "lazy";

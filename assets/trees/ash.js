@@ -77,6 +77,15 @@ window.PYINSECT_TREES.push({
       // The dash in "D-shaped" on the next two lines is a special one that never splits across two lines.
       sign: "D‑shaped holes",
       question: "Do you see any D‑shaped holes in the bark?",
+      // Real photo: U.S. Fish and Wildlife Service, public domain (free to use; we credit it anyway)
+      photos: [
+        { src: "assets/trees/ash-exit-hole-oregon.jpg", label: "A real D-shaped hole in an Oregon tree, 2022",
+          alt: "Close-up of gray tree bark with one small hole: round on top and flat on the bottom, like the letter D on its side" },
+      ],
+      photoCredit: {
+        text: "Photo: Tom Brumbelow, U.S. Fish and Wildlife Service (public domain, made smaller)",
+        links: [{ text: "photo", url: "https://commons.wikimedia.org/wiki/File:Emerald_ash_borer_hole_(52484864986).jpg" }],
+      },
       help: "Look for tiny holes shaped like the letter D, about the size of a pea (3 to 4 mm). " +
         "Adult emerald ash borers chew them when they come out of the tree.",
       picture: `<svg viewBox="0 0 320 180" role="img" aria-label="Drawing of tree bark with three small D-shaped holes">
