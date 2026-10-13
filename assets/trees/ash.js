@@ -17,7 +17,24 @@ window.PYINSECT_TREES.push({
   },
   howToTell: "Ash trees have leaves made of 5 to 11 small leaflets on one stem. Branches grow in pairs, " +
     "right across from each other. Older ash trees have bark with a diamond pattern.",
-  // Shown with howToTell. Three panels: a leaf, the branches, and the bark.
+  // Real photos, shown with howToTell. These are Oregon ash (Fraxinus latifolia) in Hillsboro, Oregon.
+  // License CC BY 2.0: we must show the credit and license (photoCredit), and say we changed them
+  // (we made them smaller). Keep the credit if you keep the photos.
+  howToTellPhotos: [
+    { src: "assets/trees/ash-leaves.jpg", label: "Ash leaf and tree",
+      alt: "An ash leaf against the sky: 7 leaflets on one stem, in pairs with one at the tip, and a whole ash tree behind it" },
+    { src: "assets/trees/ash-bark.jpg", label: "Ash trunk and bark",
+      alt: "The trunk of a big Oregon ash tree with rough bark in crisscross ridges, next to a dirt path" },
+  ],
+  photoCredit: {
+    text: "Photos: born1945, Hillsboro, Oregon (made smaller)",
+    links: [
+      { text: "leaf photo", url: "https://commons.wikimedia.org/wiki/File:Oregon_Ash,_Oregon_03.jpg" },
+      { text: "trunk photo", url: "https://commons.wikimedia.org/wiki/File:Oregon_Ash,_Oregon_04.jpg" },
+      { text: "CC BY 2.0", url: "https://creativecommons.org/licenses/by/2.0/" },
+    ],
+  },
+  // Shown with howToTell, under the photos. Three panels: a leaf, the branches, and the bark.
   howToTellPicture: `<svg viewBox="0 0 480 190" role="img" aria-label="Drawings of how to spot an ash tree: a leaf made of 7 leaflets on one stem, branches growing in pairs across from each other, and bark with a diamond pattern">
     <defs>
       <pattern id="ashBarkDiamonds" width="24" height="40" patternUnits="userSpaceOnUse">

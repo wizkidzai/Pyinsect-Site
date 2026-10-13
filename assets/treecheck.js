@@ -98,6 +98,24 @@ function showStep() {
     if (i === 0 && tree.howToTell) {
       const how = el("details", "tree-how");
       how.append(el("summary", null, `Not sure it's an ${tree.name}?`));
+      if (tree.howToTellPhotos?.length) {
+        const photos = el("div", "tree-photos");
+        for (const p of tree.howToTellPhotos) {
+          const fig = el("figure"), img = el("img");
+          img.src = p.src; img.alt = p.alt; img.loading = "lazy";
+          fig.append(img, el("figcaption", null, p.label));
+          photos.append(fig);
+        }
+        how.append(photos);
+        if (tree.photoCredit) {
+          const credit = el("p", "tree-credit", tree.photoCredit.text + " · ");
+          tree.photoCredit.links.forEach((l, i) => {
+            const a = el("a", null, l.text); a.href = l.url; a.target = "_blank"; a.rel = "noopener";
+            credit.append(...(i ? [" · "] : []), a);
+          });
+          how.append(credit);
+        }
+      }
       if (tree.howToTellPicture) { const pic = el("div", "tree-pic"); pic.innerHTML = tree.howToTellPicture; how.append(pic); }
       how.append(el("p", null, tree.howToTell));
       box.append(how);

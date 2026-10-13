@@ -107,6 +107,8 @@ const listIn = (text, start) => {
   for (const f of files) {
     const size = fs.statSync(f).size, mb = (size / 1e6).toFixed(1);
     if (f.startsWith("reports/")) problems.push(`${f}: reports must stay in the private reports repo`);
+    // Small help photos for the tree check are allowed in assets/trees/ (reports never go there)
+    else if (/^assets\/trees\/[^/]+\.jpe?g$/i.test(f)) { if (size > 300e3) problems.push(`${f} is ${(size / 1e3).toFixed(0)} KB; help photos must be under 300 KB (make it smaller)`); }
     else if (/\.(jpe?g|heic|webp)$/i.test(f)) problems.push(`${f}: photos look like reports; don't save them here`);
     else if (f.startsWith("model/") ? size > 95e6 : size > 5e6) problems.push(`${f} is ${mb} MB, which is too big`);
   }
