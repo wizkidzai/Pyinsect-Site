@@ -136,6 +136,12 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 .btn.answer { border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent); }
 .btn.answer:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
 .btn.answer:active:not(:disabled) { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+/* The answer they picked: filled in, like the main buttons (after a tap, or when they come Back) */
+.btn.answer.chosen, .btn.answer.chosen:disabled { opacity: 1; color: #fff; border-color: var(--accent); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, #fff) 0%, var(--accent) 100%); }
+@media (prefers-color-scheme: dark) { .btn.answer.chosen, .btn.answer.chosen:disabled { color: #0d1411; } }
+.btn.answer.chosen:hover:not(:disabled) { color: #fff; border-color: var(--accent); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, #fff) 0%, var(--accent) 100%); filter: brightness(1.06); }
+@media (prefers-color-scheme: dark) { .btn.answer.chosen:hover:not(:disabled) { color: #0d1411; } }
+.btn.answer:disabled:not(.chosen) { cursor: default; }
 .tree-how summary { cursor: pointer; color: var(--accent); font-weight: 500; }
 .tree-how p { margin-top: 6px; color: var(--muted); }
 .tree-how .tree-pic { margin-top: 8px; }

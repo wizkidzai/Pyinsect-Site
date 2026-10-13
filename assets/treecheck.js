@@ -12,12 +12,14 @@
 const TREES = window.PYINSECT_TREES || [];
 // steps = where they've been, so Back works. pending = what goes with the photo they're about to
 // take (app.js adds it to every photo that comes in while it's set).
-const treeCheck = { tree: null, steps: [], answers: {}, pending: null, reported };
+// chosen = answers they gave before going Back, so that button still shows as picked.
+const treeCheck = { tree: null, steps: [], answers: {}, chosen: {}, pending: null, reported };
 window.treeCheck = treeCheck;
 
 function openTreeCheck() {
   treeCheck.tree = TREES.length === 1 ? TREES[0] : null;
   treeCheck.answers = {};
+  treeCheck.chosen = {};
   treeCheck.steps = [];
   $("choices").hidden = true;
   $("treeCheck").hidden = false;
@@ -43,22 +45,36 @@ function back() {
   const step = treeCheck.steps.at(-1);
   if (!step) { closeTreeCheck(); return; }
   if (step === "pick") treeCheck.tree = null;
-  if (step.startsWith("q")) delete treeCheck.answers[treeCheck.tree.questions[+step.slice(1)].id];
+  if (step.startsWith("q")) {
+    // Back to a question: it isn't answered any more, but its button still shows what they picked
+    const id = treeCheck.tree.questions[+step.slice(1)].id;
+    treeCheck.chosen[id] = treeCheck.answers[id];
+    delete treeCheck.answers[id];
+  }
   showStep();
 }
 
 function startOver() {
   treeCheck.pending = null;
   treeCheck.answers = {};
+  treeCheck.chosen = {};
   treeCheck.steps = [];
   if (TREES.length > 1) treeCheck.tree = null;
   goTo(treeCheck.tree ? "q0" : "pick");
 }
 
-function answer(index, yes) {
-  const qs = treeCheck.tree.questions;
-  treeCheck.answers[qs[index].id] = yes;
-  goTo(yes ? "photo" : index + 1 < qs.length ? `q${index + 1}` : "healthy");
+// The tapped button lights up for a moment (so they see their answer was picked), then the next
+// step shows. Both buttons are off during that moment, so a double tap can't answer twice.
+function answer(index, yes, picked) {
+  const qs = treeCheck.tree.questions, step = treeCheck.steps.at(-1);
+  picked.parentElement.querySelectorAll("button").forEach(b => { b.disabled = true; b.classList.remove("chosen"); b.removeAttribute("aria-pressed"); });
+  picked.classList.add("chosen");
+  picked.setAttribute("aria-pressed", "true");
+  setTimeout(() => {
+    if (treeCheck.steps.at(-1) !== step || $("treeCheck").hidden) return;   // they left in the meantime
+    treeCheck.answers[qs[index].id] = yes;
+    goTo(yes ? "photo" : index + 1 < qs.length ? `q${index + 1}` : "healthy");
+  }, 250);
 }
 
 // What goes along with the tree check photo: which tree, the signs they saw, and the report's name
@@ -119,8 +135,10 @@ function showStep() {
     // The answer buttons say what they answer ("Yes, I see holes"), so they can't be mixed up with
     // the "Not sure it's an ash tree?" help below them. Both look the same on purpose: a filled
     // "Yes" looked already chosen and nudged people to answer Yes.
-    button(q.yes || "Yes", "answer", () => answer(i, true));
-    button(q.no || "No", "answer", () => answer(i, false));
+    const was = treeCheck.chosen[q.id];   // what they picked before going Back, if anything
+    const yesBtn = button(q.yes || "Yes", "answer" + (was === true ? " chosen" : ""), () => answer(i, true, yesBtn));
+    const noBtn = button(q.no || "No", "answer" + (was === false ? " chosen" : ""), () => answer(i, false, noBtn));
+    if (was !== undefined) (was ? yesBtn : noBtn).setAttribute("aria-pressed", "true");
     box.append(buttons);
     if (i === 0 && tree.howToTell) {
       const how = el("details", "tree-how");
