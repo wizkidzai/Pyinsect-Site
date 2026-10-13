@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261013b">
+<link rel="stylesheet" href="assets/site.css?v=20261013d">
 </head>
 <body>
 <div class="wrap">
@@ -96,6 +96,24 @@
     </div>
   </section>
 
+  <section class="ledger reports-map" id="reportsMapSection" aria-labelledby="reportsMapTitle">
+    <div class="ledger-head">
+      <h2 id="reportsMapTitle">🗺️ Reports map</h2>
+    </div>
+    <p class="hint">Invasive bugs and tree damage reported by everyone, in squares about 1 km wide. No photos and no exact spots are ever shown.</p>
+    <ul class="map-key" aria-label="What the colors mean">
+      <li><span class="swatch" style="background:#1f8a4c"></span>Verified: a person on our team checked it</li>
+      <li><span class="swatch" style="background:#2f6fb3"></span>AI checked: an AI thinks it's a match</li>
+      <li><span class="swatch" style="background:#8a8f8c"></span>Not checked yet</li>
+      <li><span class="swatch mine"></span>Your reports (only you see these)</li>
+    </ul>
+    <div class="actions">
+      <button id="showReportsMap" class="btn" type="button">Show the map</button>
+      <span id="reportsMapMsg" class="muted" role="status"></span>
+    </div>
+    <div id="reportsMap" class="catch-map reports-map-box" hidden></div>
+  </section>
+
   <section class="game" id="game" aria-label="Innvadex game">
     <div class="ledger-head">
       <h2>Innvadex</h2>
@@ -177,9 +195,10 @@
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261013b"></script>
+<script src="assets/app.js?v=20261013c"></script>
 <script src="assets/trees/ash.js?v=20261012l"></script>
 <script src="assets/treecheck.js?v=20261013b"></script>
+<script src="assets/reportsmap.js?v=20261013c"></script>
 <script src="assets/game.js?v=20261011c"></script>
 </body>
 </html>

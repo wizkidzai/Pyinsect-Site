@@ -214,6 +214,7 @@ function sendPending() {
         dropPending(report.id);
         sent++;
         markReport(report.id, "Reported", "sent ok");
+        updateMine(report.id, { level: "unchecked" });
       } catch (e) {
         if (e.rejected) {   // would fail forever; drop it so later reports still go out
           dropPending(report.id);
@@ -379,6 +380,23 @@ function updateMine(id, change) {
   renderMine();
 }
 
+// Check levels for this phone's reports: asks the relay about their ids only (GET /status?ids=...)
+const MINE_LEVELS = { unchecked: "⚪ Not checked yet", ai: "🔵 AI checked", verified: "🟢 Verified by our team", not_match: "✗ Not a match" };
+async function refreshLevels() {
+  const sent = mine.get().filter(m => m.ok).slice(0, 50);
+  if (!RELAY_URL || !sent.length) return;
+  try {
+    const res = await fetch(`${RELAY_URL.replace(/\/$/, "")}/status?ids=${sent.map(m => m.id).join(",")}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const levels = (await res.json()).levels || {};
+    const all = mine.get();
+    let changed = false;
+    for (const m of all) if (levels[m.id] && m.level !== levels[m.id]) { m.level = levels[m.id]; changed = true; }
+    if (changed) { mine.set(all); renderMine(); }
+  } catch {}   // offline or an older relay: try again next time
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshLevels(); });
+
 // Older saved entries have scientific + confidence instead of detail
 const mineDetail = m => m.detail ?? [m.scientific, `${Number(m.confidence).toFixed(1)}%`].filter(Boolean).join(" · ");
 
@@ -391,6 +409,7 @@ function renderMine() {
     const row = el("div", "row"), img = el("img"), what = el("div", "what"), side = el("div", "when");
     img.alt = ""; if (m.photo) img.src = "data:image/jpeg;base64," + m.photo;
     what.append(el("strong", null, m.name), el("span", "muted", mineDetail(m)));
+    if (m.ok) what.append(el("span", "mine-level " + (m.level || "unchecked"), MINE_LEVELS[m.level || "unchecked"]));
     // Today: just the time. Earlier days: the date (the list stays for days now)
     const t = new Date(m.timestamp), today = !isNaN(t) && t.toDateString() === new Date().toDateString();
     side.append(el("span", "state " + (m.ok ? "on" : /^Sending/.test(m.status) ? "" : "warn"), m.ok ? "Reported" : m.status),
@@ -925,5 +944,6 @@ window.addEventListener("online", () => sendPending());
 
 showReportState();
 renderMine();
+refreshLevels();
 sendPending();
 loadModel();
