@@ -88,5 +88,28 @@ const listIn = (text, start) => {
     "remove the file from the project (ask a grown-up if it's a model file).");
 }
 
+// 5. Game translations: every sentence has Spanish, French, and Hindi, with the same {names}
+if (fs.existsSync("assets/game-i18n.js")) {
+  const problems = [];
+  let dict = {};
+  try { dict = new Function(fs.readFileSync("assets/game-i18n.js", "utf8") + "; return GAME_I18N;")(); }
+  catch (e) { problems.push(`assets/game-i18n.js: ${e.message}`); }
+  const holes = text => (text.match(/\{\w+\}/g) || []).sort().join(" ");
+  for (const [en, list] of Object.entries(dict)) {
+    if (!Array.isArray(list) || list.length !== 3 || list.some(x => !x)) { problems.push(`"${en}" needs 3 translations: [Spanish, French, Hindi]`); continue; }
+    list.forEach((x, i) => {
+      if (holes(x) !== holes(en)) problems.push(`"${en}": the ${["Spanish", "French", "Hindi"][i]} needs the same {curly bracket} words as the English`);
+    });
+  }
+  // Sentences written straight into t("...") in the game must be in the dictionary
+  const game = fs.existsSync("assets/game.js") ? fs.readFileSync("assets/game.js", "utf8") : "";
+  for (const m of game.matchAll(/\bt\("((?:[^"\\]|\\.)*)"[,)]/g)) {
+    const en = JSON.parse(`"${m[1]}"`);
+    if (!dict[en]) problems.push(`"${en}" is in assets/game.js but has no translation in assets/game-i18n.js`);
+  }
+  report("Game translations are complete", problems,
+    "add the sentence to assets/game-i18n.js with [Spanish, French, Hindi], and keep {curly bracket} words the same.");
+}
+
 console.log(failed ? `\n${failed} check(s) need fixing.` : "\nAll checks passed!");
 process.exit(failed ? 1 : 0);

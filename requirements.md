@@ -80,3 +80,119 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [ ] Sounds play, and the mute button stops them.
   - [ ] Your rank goes up when you get enough points.
   - [ ] Buy a Super Net in the shop, and the next minigame has more time.
+
+## Innvadex version 4: animations, cutscenes, trainer card, and streaks
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** The game should feel more alive, like a real video game, with a story.
+- **Why it matters:** A story and fun effects keep people playing, so more invasive bugs get
+  found and reported.
+- **Our idea:**
+  - **Animations:** a jar catches the bug and wobbles, then confetti. Battle attacks lunge and
+    shake, damage numbers float up, and fainted bugs fall over. Confetti for wins, badges, and
+    rank-ups. Animations turn off for people whose device asks for less motion.
+  - **Cutscenes:** an intro story with Professor Hazel, a cutscene before and after each gym, and
+    an ending when you beat all 4 gyms. Every cutscene can be skipped, and the intro can be
+    watched again.
+  - **Trainer card:** pick a nickname (not your real name) and an avatar emoji. Saved only on
+    this device.
+  - **Play streak:** play on days in a row for bonus points and streak badges.
+- **Other ideas we talked about:** none yet.
+- **Done when:**
+  - [ ] The intro cutscene plays the first time, can be skipped, and can be watched again.
+  - [ ] Catching a bug shows the jar animation and confetti.
+  - [ ] Battle attacks shake the bug that got hit and show the damage.
+  - [ ] Gym battles have a cutscene before and after.
+  - [ ] Your nickname and avatar show up in battles.
+  - [ ] Playing two days in a row shows a 2-day streak.
+
+## Innvadex version 5: more cutscenes, more gyms, harder gyms
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want more story and a bigger challenge.
+- **Why it matters:** The story teaches how invasive bugs spread, and a long adventure keeps
+  people finding and reporting bugs.
+- **Our idea:**
+  - **New cutscenes:** first catch, first Legendary bug, every rank-up, and each new gym opening.
+  - **Edited cutscenes:** the intro now teaches how invasive bugs travel (firewood, shipping
+    crates, plants, and cars). Gym cutscenes show the leader's strongest bug, victory cutscenes
+    say where to go next, and the ending comes after you beat the Champion.
+  - **More gyms:** Siuslaw Coast, Columbia Gorge, Deschutes, and Crater Lake (8 gyms in all),
+    plus a final battle with Oregon Champion Juniper. Gyms are beaten in order.
+  - **Harder gyms:** bigger teams, stronger leader bugs (up to Lv 4 for the Champion), smarter
+    leaders, and tough leaders can heal a hurt bug once or twice.
+- **Other ideas we talked about:** none yet.
+- **Done when:**
+  - [ ] Catching your first bug plays the "first catch" cutscene.
+  - [ ] A gym stays locked until you beat the gym before it.
+  - [ ] Beating a gym plays a victory cutscene that says where to go next.
+  - [ ] A tough gym leader heals a hurt bug during a battle.
+  - [ ] Beating the Champion plays the ending.
+
+## Innvadex version 6: longer cutscenes, more ranks, more gyms
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want a bigger story and a longer adventure.
+- **Why it matters:** Longer cutscenes teach more about invasive bugs, and a longer adventure
+  keeps people finding and reporting them.
+- **Our idea:**
+  - **Longer cutscenes:** a new helper, Pip, a native western bumble bee. The intro is 13 slides,
+    each gym has 5 slides before (the place, the leader, their strongest bug, what to do if you
+    see one) and 6 after (badge, a real-world tip, where to go next). The ending is 8 slides.
+  - **More ranks:** 13 ranks, from Rookie to Guardian of Oregon (2500 points).
+  - **More gyms:** Umpqua River, Rogue-Siskiyou, Wallowa Canyon, and Malheur Mountain, for 12
+    gyms plus the Oregon Champion.
+- **Other ideas we talked about:** bug types, seasonal events, a Protector-dex, real-world
+  missions, a cutscene gallery, Spanish, French, and Hindi, and big-text mode. These are next.
+- **Done when:**
+  - [ ] The intro has Pip in it.
+  - [ ] The Battle tab lists 12 gyms and the Champion, in order.
+  - [ ] Gym cutscenes show the leader's strongest bug and a real-world tip.
+  - [ ] Reaching 25 points makes you a Bug Spotter.
+
+## Innvadex version 7: bug types, seasons, Protector-dex, missions, story gallery, big text
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want more ways to play, learn, and help in real life.
+- **Why it matters:** Missions and seasons connect the game to real forests, and big text makes
+  it easier for more people to play.
+- **Our idea:**
+  - **Bug types:** beetle, ant, wasp, moth & butterfly, true bug, and termite. Some types are
+    strong against others (1.5× damage), like wasps against moths.
+  - **Seasonal events:** each season, some groups of bugs give double points.
+  - **Protector-dex:** a collection of bugs you found that aren't invasive.
+  - **Real-world missions:** 8 things to do with a grown-up, like checking where firewood comes from.
+  - **Story gallery:** watch any cutscene you've unlocked again.
+  - **Big-text mode:** makes the game bigger and easier to read.
+- **Other ideas we talked about:** Spanish, French, and Hindi versions (next).
+- **Done when:**
+  - [ ] A wasp attacking a moth says "It's super effective!"
+  - [ ] The season banner shows the right season.
+  - [ ] A bug that isn't invasive shows up in the Protector-dex.
+  - [ ] Finishing a mission gives 10 points, once.
+  - [ ] The Story tab replays the intro.
+  - [ ] Big text makes the game bigger.
+
+## Innvadex in Spanish, French, and Hindi
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** People in Oregon (and anywhere) who read Spanish, French, or Hindi better than English.
+- **Problem:** The game was only in English.
+- **Why it matters:** More people can play, learn about invasive bugs, and report them.
+- **Our idea:** A language menu (🌐) in the Innvadex with English, Español, Français, and हिन्दी.
+  Every sentence in the game is translated in `assets/game-i18n.js`. Bug names and people's
+  names stay the same. The bug-photo part of the website is still English for now.
+- **Other ideas we talked about:** translating the whole website (maybe later).
+- **Done when:**
+  - [ ] Picking a language changes the whole game, including cutscenes and battles.
+  - [ ] The language is remembered after a reload.
+  - [ ] Someone who speaks each language has checked the translations.
