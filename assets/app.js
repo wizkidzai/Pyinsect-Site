@@ -154,18 +154,40 @@ function reportPhoto(bmp) {
   return c.toDataURL("image/jpeg", 0.8).split(",")[1];
 }
 
-function buildReport(bmp, species, confidence, top3) {
+// A new report's id (UTC time + random letters) and its local time with the time zone
+function reportIdAndTime() {
   const now = new Date(), pad = n => String(n).padStart(2, "0");
   const id = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}-${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}-${Math.random().toString(16).slice(2, 6)}`;
   const offset = -now.getTimezoneOffset(), sign = offset >= 0 ? "+" : "-";
-  const local = new Date(now.getTime() + offset * 60000).toISOString().slice(0, 19)
+  const timestamp = new Date(now.getTime() + offset * 60000).toISOString().slice(0, 19)
     + `${sign}${pad(Math.floor(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
+  return { id, timestamp };
+}
+const APP_VERSION = "web-1.2";
+const reportTop3 = top3 => top3.map(t => ({ species: t.species, name: commonName(t.species), confidence: Math.round(t.confidence * 100) / 100 }));
+
+function buildReport(bmp, species, confidence, top3) {
+  const { id, timestamp } = reportIdAndTime();
   return {
     report: {
-      id, timestamp: local, species, name: commonName(species), ...(MODEL.scientific ? { scientific: sciName(species) } : {}),
+      id, timestamp, species, name: commonName(species), ...(MODEL.scientific ? { scientific: sciName(species) } : {}),
       confidence: Math.round(confidence * 100) / 100,
-      top3: top3.map(t => ({ species: t.species, name: commonName(t.species), confidence: Math.round(t.confidence * 100) / 100 })),
-      photo: `${id}.jpg`, model: MODEL_NAME, app_version: "web-1.1",
+      top3: reportTop3(top3),
+      photo: `${id}.jpg`, model: MODEL_NAME, app_version: APP_VERSION,
+    },
+    photo: reportPhoto(bmp),
+  };
+}
+
+// A photo from the tree check (assets/treecheck.js). tree = { id, signs, name, signsText }.
+// The relay makes its own name from the tree and signs; ours is only for this device.
+function buildTreeReport(bmp, tree, top3) {
+  const { id, timestamp } = reportIdAndTime();
+  return {
+    report: {
+      id, timestamp, kind: "tree", tree: tree.id, signs: tree.signs, name: tree.name,
+      top3: reportTop3(top3),   // the bug model's guesses, as extra help for the team
+      photo: `${id}.jpg`, model: MODEL_NAME, app_version: APP_VERSION,
     },
     photo: reportPhoto(bmp),
   };
@@ -209,14 +231,14 @@ function sendPending() {
   return sending;
 }
 
-function fileReport(bmp, species, confidence, top3, card) {
+// r = a report from buildReport or buildTreeReport. detail = the small line under it in "Your reports".
+function fileReport(r, card, detail) {
   const line = el("span", "sent", "");
   card.querySelector(".info").append(line);
   if (!RELAY_URL) { line.textContent = "Not reported: the report server isn't set up yet."; return; }
-  const r = buildReport(bmp, species, confidence, top3);
   line.dataset.report = r.report.id;
   line.textContent = "Sending report…";
-  addMine(r);
+  addMine(r, detail);
   const list = store.get(PENDING_KEY, []);
   list.push(r);
   if (!store.set(PENDING_KEY, list)) { markReport(r.report.id, "Not reported: this browser's storage is full.", "sent bad"); return; }
@@ -271,9 +293,10 @@ const mine = {
   },
 };
 
-function addMine({ report, photo }) {
+// detail = the small line under the name, like "Agrilus planipennis · 91.2%" or the signs seen
+function addMine({ report, photo }, detail) {
   const list = mine.get();
-  list.unshift({ id: report.id, name: report.name, scientific: report.scientific || "", confidence: report.confidence,
+  list.unshift({ id: report.id, name: report.name, detail: detail || mineDetail(report),
     timestamp: report.timestamp, model: report.model, photo, status: "Sending report…", ok: false });
   mine.set(list.slice(0, 30));
   renderMine();
@@ -287,6 +310,9 @@ function updateMine(id, change) {
   renderMine();
 }
 
+// Older saved entries have scientific + confidence instead of detail
+const mineDetail = m => m.detail ?? [m.scientific, `${Number(m.confidence).toFixed(1)}%`].filter(Boolean).join(" · ");
+
 function renderMine() {
   const list = mine.get(), box = $("mine");
   $("mineSection").hidden = !list.length;
@@ -295,14 +321,14 @@ function renderMine() {
   for (const m of list) {
     const row = el("div", "row"), img = el("img"), what = el("div", "what"), side = el("div", "when");
     img.alt = ""; if (m.photo) img.src = "data:image/jpeg;base64," + m.photo;
-    what.append(el("strong", null, m.name), el("span", "muted", [m.scientific, `${Number(m.confidence).toFixed(1)}%`].filter(Boolean).join(" · ")));
+    what.append(el("strong", null, m.name), el("span", "muted", mineDetail(m)));
     const t = new Date(m.timestamp);
     side.append(el("span", "state " + (m.ok ? "on" : /^Sending/.test(m.status) ? "" : "warn"), m.ok ? "Reported" : m.status),
       el("span", null, isNaN(t) ? "" : t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
     row.append(img, what, side);
     if (m.photo) {
       row.tabIndex = 0; row.setAttribute("role", "button"); row.title = "Show the whole photo";
-      const open = () => openViewer(img.src, m.name, [m.scientific, `${Number(m.confidence).toFixed(1)}%`,
+      const open = () => openViewer(img.src, m.name, [mineDetail(m),
         isNaN(t) ? "" : t.toLocaleString(), m.ok ? "Reported" : m.status].filter(Boolean).join(" · "));
       row.onclick = open;
       row.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
@@ -378,6 +404,12 @@ function classify(file) {
       const probs = softmax(Array.from(out[session.outputNames[0]].data));
       const top3 = [...probs.keys()].sort((a, b) => probs[b] - probs[a]).slice(0, 3)
         .map(i => ({ species: CLASS_NAMES[i] ?? `idx_${i}`, confidence: probs[i] * 100 }));
+      if (file.tree) {
+        await treePhoto(file, bmp, top3, card);
+        bmp.close?.();
+        setStatus(readyText(), "ready");
+        return;
+      }
       const invasive = fillCard(card, top3);
       if (sharpness(bmp) < BLUR_THRESHOLD) {
         card.querySelector(".info .name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
@@ -387,7 +419,7 @@ function classify(file) {
         const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown", reasons: [] }));
         if (ai.verdict === "ai") { blockReport(card, ai); window.Innvadex?.fakePhoto(); }
         else {
-          fileReport(bmp, top3[0].species, top3[0].confidence, top3, card);
+          fileReport(buildReport(bmp, top3[0].species, top3[0].confidence, top3), card);
           window.Innvadex?.encounter(top3[0].species, card.querySelector("img").src);   // the game (assets/game.js)
         }
       } else if (window.Innvadex) {
@@ -407,6 +439,26 @@ function classify(file) {
   });
 }
 
+// A photo from the tree check: always sent to the team, because the person asked us to look at it.
+// The bug model's guesses go along for the team but aren't shown here: on a photo of bark, it would
+// just name whichever bug looks closest, which would be confusing.
+async function treePhoto(file, bmp, top3, card) {
+  const tree = file.tree, info = card.querySelector(".info"), fileLine = info.querySelector(".file");
+  card.className = "card tree";
+  info.innerHTML = "";
+  info.append(el("span", "flag tree", "Tree check"), el("p", "name", tree.name), fileLine, el("p", "tree-signs", tree.signsText));
+  if (sharpness(bmp) < BLUR_THRESHOLD) {
+    info.querySelector(".name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
+  }
+  const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown", reasons: [] }));
+  if (ai.verdict === "ai") { blockReport(card, ai); return; }
+  fileReport(buildTreeReport(bmp, tree, top3), card, tree.signsText);
+  window.treeCheck?.reported();
+}
+
+// While the tree check is waiting for its photo, new photos belong to it
+const tagForTree = file => { if (window.treeCheck?.pending) file.tree = window.treeCheck.pending; return file; };
+
 // source = where the photos came from ("pick", "drop", "capture" = the phone's camera app).
 // One photo goes to the crop step first; many photos are checked straight away.
 function handleFiles(list, source) {
@@ -414,6 +466,7 @@ function handleFiles(list, source) {
   const files = [...list].filter(f => EXT.test(f.name)).sort((a, b) =>
     (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name));
   if (!files.length) { setStatus("No supported images found (jpg, png, bmp, webp).", "error"); return; }
+  files.forEach(tagForTree);
   if (files.length === 1) showCrop(files[0], source);
   else files.forEach(classify);
 }
@@ -627,7 +680,7 @@ function takePhoto() {
     closeCamera();
     const photo = new File([blob], name, { type: "image/jpeg" });
     photo.fromCamera = true;
-    showCrop(photo, "camera");
+    showCrop(tagForTree(photo), "camera");
   }, "image/jpeg", 0.92);
 }
 
@@ -699,6 +752,7 @@ async function checkCrop() {
     if (!blob) throw new Error("couldn't make the zoomed photo");
     const zoomed = new File([blob], file.name.replace(/\.[^.]+$/, "") + "-zoomed.jpg", { type: "image/jpeg" });
     zoomed.fromCamera = file.fromCamera;
+    zoomed.tree = file.tree;
     zoomed.original = file;   // the AI-photo check reads labels that only the original file has
     classify(zoomed);
   } catch (e) {

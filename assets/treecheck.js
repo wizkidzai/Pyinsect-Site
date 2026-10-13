@@ -4,12 +4,16 @@
 //
 // Steps: "pick" (which tree, only when there's more than one) → one step per question →
 // "photo" (when they answer Yes, skip, or are still worried) or "healthy" (No to everything).
+// After the photo is sent, "thanks". app.js sends the report (buildTreeReport) and calls
+// treeCheck.reported() when it's on its way.
 // Everything is wrapped in (() => { ... })() so its names don't clash with the other scripts.
 
 (() => {
 const TREES = window.PYINSECT_TREES || [];
-const treeCheck = { tree: null, steps: [], answers: {} };   // steps = where they've been, so Back works
-window.treeCheck = treeCheck;   // the answers go along with the report later
+// steps = where they've been, so Back works. pending = what goes with the photo they're about to
+// take (app.js adds it to every photo that comes in while it's set).
+const treeCheck = { tree: null, steps: [], answers: {}, pending: null, reported };
+window.treeCheck = treeCheck;
 
 function openTreeCheck() {
   treeCheck.tree = TREES.length === 1 ? TREES[0] : null;
@@ -21,6 +25,7 @@ function openTreeCheck() {
 }
 
 function closeTreeCheck() {
+  treeCheck.pending = null;
   $("treeCheck").hidden = true;
   $("choices").hidden = false;
   treeCheck.tree = null;
@@ -33,6 +38,7 @@ function goTo(step) {
 }
 
 function back() {
+  treeCheck.pending = null;
   treeCheck.steps.pop();
   const step = treeCheck.steps.at(-1);
   if (!step) { closeTreeCheck(); return; }
@@ -42,6 +48,7 @@ function back() {
 }
 
 function startOver() {
+  treeCheck.pending = null;
   treeCheck.answers = {};
   treeCheck.steps = [];
   if (TREES.length > 1) treeCheck.tree = null;
@@ -52,6 +59,21 @@ function answer(index, yes) {
   const qs = treeCheck.tree.questions;
   treeCheck.answers[qs[index].id] = yes;
   goTo(yes ? "photo" : index + 1 < qs.length ? `q${index + 1}` : "healthy");
+}
+
+// What goes along with the tree check photo: which tree, the signs they saw, and the report's name
+// (the relay makes the same name itself).
+function photoTag() {
+  const tree = treeCheck.tree, seen = tree.questions.filter(q => treeCheck.answers[q.id]);
+  const name = seen.length ? `Possible ${tree.pest} damage` : `${tree.name[0].toUpperCase() + tree.name.slice(1)} to check`;
+  const signsText = seen.length ? `You saw: ${seen.map(q => q.sign).join(", ")}` : "No signs seen. Sent because you were still worried.";
+  return { id: tree.id, signs: seen.map(q => q.id), name, signsText };
+}
+
+// app.js calls this once the tree check photo's report is on its way
+function reported() {
+  treeCheck.pending = null;
+  if (!$("treeCheck").hidden && treeCheck.steps.at(-1) !== "thanks") goTo("thanks");
 }
 
 // Draws the current step inside the tree check panel
@@ -95,17 +117,27 @@ function showStep() {
     box.append(el("p", null, (seen.length ? `You saw ${seen.join(" and ")}. ` : "") + tree.photo.text));
     // The photo buttons wait for the AI to finish loading, or the photo would be ignored
     const ready = typeof session !== "undefined" && !!session;
-    const cam = button("Take photo", "primary", () => openCamera());
-    const pick = button("Select photo", "", () => $("photoInput").click());
+    const cam = button("Take photo", "primary", () => { treeCheck.pending = photoTag(); openCamera(); });
+    const pick = button("Select photo", "", () => { treeCheck.pending = photoTag(); $("photoInput").click(); });
     cam.disabled = pick.disabled = !ready;
-    box.append(buttons);
+    box.append(buttons, el("p", "hint", "Your photo will be sent to the Pyinsect team, so a person can look at it."));
     if (!ready) {
       box.append(el("p", "hint", "Getting the AI ready…"));
       setTimeout(() => { if (treeCheck.steps.at(-1) === "photo" && !$("treeCheck").hidden) showStep(); }, 500);
     }
   }
 
-  $("treeStartOver").hidden = treeCheck.steps.length < 2;
+  if (step === "thanks") {
+    title.textContent = "Report made, thank you! 🙂";
+    box.append(el("p", null, `We're sending your photo to the Pyinsect team, and a person will look at it. ` +
+      `You can see it under "Your reports" further down this page.`));
+    button("Check another tree", "primary", startOver);
+    button("Done", "", closeTreeCheck);
+    box.append(buttons);
+  }
+
+  $("treeBack").hidden = step === "thanks";
+  $("treeStartOver").hidden = treeCheck.steps.length < 2 || step === "thanks";
   if (!$("treeCheck").hidden && document.activeElement !== title) {
     title.focus({ preventScroll: true });
     $("treeCheck").scrollIntoView({ behavior: "smooth", block: "start" });

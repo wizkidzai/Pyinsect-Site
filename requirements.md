@@ -150,10 +150,13 @@ To add one, ask your AI helper to help you plan a new feature. It will use
     the bark." Never say "nothing to worry about", because the app doesn't actually know.
   - **Keeping those photos:** ask "Can we keep this photo to help train our app?" We keep it only
     if they tap Yes. We never keep a photo that shows a person.
-  - **Reports:** if the bug AI finds an invasive bug, report it like today. If the person said
-    yes to holes or lines, report it as "possible emerald ash borer damage" so a person on our
-    team can check it. The relay must accept these damage reports too, so a grown-up needs to
-    redeploy the relay.
+  - **Reports (built):** every photo from the tree check is sent to our team as a "tree check"
+    report, because the person asked us to look. If they said yes to holes or lines, it's called
+    "Possible emerald ash borer damage". If they were only still worried, it's "Ash tree to check".
+    The bug AI's guesses go along for the team but aren't shown to the person, because on a photo
+    of bark the bug AI just names whichever bug looks closest. Then the page says "Report made,
+    thank you! 🙂". AI-made photos are still never reported. The relay accepts these reports and
+    makes their names itself, so a grown-up needs to redeploy the relay.
   - **Ash trees only for now.** The questions, help pictures, and messages live in one settings
     file (`assets/trees/ash.js`), so the team can add other trees later without changing the
     code. A teammate is training a tree and damage AI that can plug in here later.

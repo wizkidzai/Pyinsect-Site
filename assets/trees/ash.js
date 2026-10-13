@@ -4,7 +4,8 @@
 // To add another tree: copy this file (like assets/trees/oak.js), change the words and
 // pictures, and add a <script> line for it in index.html next to this one.
 // Pictures are drawn with SVG (shapes written as code), so we don't need anyone's permission
-// to use them. You can swap in your own photo with: picture: '<img src="assets/trees/my-photo.jpg" alt="...">'
+// to use them. You can swap in your own photo with: picture: '<img src="assets/trees/my-photo.png" alt="...">'
+// (use .png or .svg: scripts/check.js refuses .jpg files, so report photos never get saved here by mistake)
 window.PYINSECT_TREES = window.PYINSECT_TREES || [];
 window.PYINSECT_TREES.push({
   id: "ash",
