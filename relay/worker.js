@@ -107,7 +107,7 @@ async function submit(request, env) {
   }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 9, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 10, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   const origin = request.headers.get("Origin");
