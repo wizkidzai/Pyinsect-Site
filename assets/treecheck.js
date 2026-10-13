@@ -116,6 +116,11 @@ function showStep() {
     title.textContent = q.question;
     const pic = el("div", "tree-pic"); pic.innerHTML = q.picture;   // pictures come from our own settings files
     box.append(el("p", "tree-count", `Question ${i + 1} of ${tree.questions.length}`), pic, ...photoRow(q.photos, q.photoCredit), el("p", null, q.help));
+    // The answer buttons say what they answer ("Yes, I see holes"), so they can't be mixed up with
+    // the "Not sure it's an ash tree?" help below them
+    button(q.yes || "Yes", "primary", () => answer(i, true));
+    button(q.no || "No", "", () => answer(i, false));
+    box.append(buttons);
     if (i === 0 && tree.howToTell) {
       const how = el("details", "tree-how");
       how.append(el("summary", null, `Not sure it's an ${tree.name}?`));
@@ -124,9 +129,6 @@ function showStep() {
       how.append(el("p", null, tree.howToTell));
       box.append(how);
     }
-    button("Yes", "primary", () => answer(i, true));
-    button("No", "", () => answer(i, false));
-    box.append(buttons);
     const skip = el("button", "link", "Skip, just take a picture");
     skip.type = "button"; skip.onclick = () => goTo("photo");
     box.append(skip);

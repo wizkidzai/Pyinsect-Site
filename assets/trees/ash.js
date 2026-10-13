@@ -67,10 +67,13 @@ window.PYINSECT_TREES.push({
     </g>
   </svg>`,
   // Asked in order. "Yes" to any question goes to the photo step. "No" goes to the next question,
-  // and "No" to the last question goes to the healthy page.
+  // and "No" to the last question goes to the healthy page. yes / no = the words on the two
+  // answer buttons (say what they answer, so they can't be mixed up with other help on the page).
   questions: [
     {
       id: "holes",
+      yes: "Yes, I see holes",
+      no: "No holes",
       // The dash in "D-shaped" on the next two lines is a special one that never splits across two lines.
       sign: "D‑shaped holes",
       question: "Do you see any D‑shaped holes in the bark?",
@@ -92,6 +95,8 @@ window.PYINSECT_TREES.push({
     },
     {
       id: "galleries",
+      yes: "Yes, I see lines",
+      no: "No lines",
       sign: "wavy lines (galleries)",
       question: "Do you see any wavy lines under the bark?",
       // Real photos (optional, any question can have them). Credit: the Oregon photo is public domain
