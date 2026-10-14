@@ -30,10 +30,11 @@ per find) live in `reports/` of a separate private repo that only the relay can 
    3. In `relay/worker.js`, set `REPORTS_REPO` near the top to
       `<your-username>/<private reports repo>`. Then **Edit code**, replace everything with the
       contents of `relay/worker.js`, **Deploy**. (The reports repo is set in the code, not as a
-      Cloudflare setting, so it can't accidentally point at a public repo.)
+      Cloudflare setting, so it can't accidentally point at a public repo.) Also put your site's
+      address (`https://<your-username>.github.io`) in `SITE_ORIGINS`, and your site's full link in
+      `SITE` near the bottom (the reports page loads the AI check from there).
    4. **Settings → Variables and Secrets → Add**:
       - `GITHUB_TOKEN`, **Secret**: the token from step 3
-      - `ALLOWED_ORIGIN`, Text: `https://<your-username>.github.io`
       - `VIEW_PASSWORD`, **Secret**: the password for the reports page
       - `VIEW_PATH`, **Secret**: a secret word for the page address (letters, digits, `-`, `_`)
    5. Put the worker's address (`https://pyinsect-relay.<something>.workers.dev`) in
