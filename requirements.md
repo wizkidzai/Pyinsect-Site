@@ -262,3 +262,30 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [ ] Close the browser, open the app again, and **My reports** still lists your reports with
         their check level.
   - [ ] The map never shows photos or exact spots.
+
+## Team AI check switch
+
+- **Status:** Done
+- **Asked by:** edafawd, 2026-10-13
+- **Who it's for:** Our team.
+- **Problem or need:** A way to turn on AI checking on the main page.
+- **Why they have it:** We test lots of photos on the main page and want to spot AI-made ones right
+  away, but the AI checker is big (172 MB), so it should stay off for normal visitors.
+- **Our idea:** A hidden switch. It only shows when the site is opened with `?team` at the end of
+  the link (or when it's already on). When it's on, every photo card says "Verified by AI:" and what
+  the AI checker found, like "AI-made (95%)" or "Real (98%)". It never stops a report, because the
+  checker sometimes calls real photos AI-made (about 1 in 5 in our test).
+- **Other ideas we talked about:**
+  - A switch everyone can see: normal visitors might turn it on and download 172 MB by mistake.
+  - An "AI check" button on each photo: more tapping when we test lots of photos.
+  - Not reporting AI-made photos: some real finds would be lost, because the checker makes mistakes.
+- **User flow:**
+  1. A team member opens `https://wizkidzai.github.io/Pyinsect-Site/?team`.
+  2. A "Team: AI check" switch shows near the top. They tick it, and their device remembers it.
+  3. The first time, the AI checker downloads (172 MB) and shows how far along it is.
+  4. They add a photo like normal. The card says "Verified by AI: AI-made (95%)" or "Verified by AI: Real (98%)".
+  5. To stop, they untick the switch. Visitors without `?team` never see the switch.
+- **Done when:**
+  - [x] Without `?team`, there's no switch and nothing extra downloads.
+  - [x] With `?team`, tick the switch, add a photo, and the card says "Verified by AI: …".
+  - [x] Reload the page with the switch ticked, and it's still on.

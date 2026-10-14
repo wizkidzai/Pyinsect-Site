@@ -500,6 +500,7 @@ function classify(file) {
         return;
       }
       const invasive = fillCard(card, top3);
+      window.teamAI?.check(file, card);   // team AI check switch (assets/teamai.js)
       if (sharpness(bmp) < BLUR_THRESHOLD) {
         card.querySelector(".info .name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
       }
@@ -536,6 +537,7 @@ async function treePhoto(file, bmp, top3, card) {
   card.className = "card tree";
   info.innerHTML = "";
   info.append(el("span", "flag tree", "Tree check"), el("p", "name", tree.name), fileLine, el("p", "tree-signs", tree.signsText));
+  window.teamAI?.check(file, card);   // team AI check switch (assets/teamai.js)
   if (sharpness(bmp) < BLUR_THRESHOLD) {
     info.querySelector(".name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
   }
