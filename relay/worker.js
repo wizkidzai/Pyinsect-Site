@@ -25,6 +25,11 @@ const INVASIVE = new Set([
   "fire_ant", "formosan_termite", "japanese_beetle", "oriental_beetle", "rose_chafer",
   "spongy_moth", "spotted_lanternfly",
 ]);
+// Tree check reports (the "Help me check my tree" questions on the site). Must match the tree
+// settings files, assets/trees/*.js: the tree id, its pest, and the id and sign of each question.
+const TREE_CHECKS = {
+  ash: { tree: "Ash tree", pest: "emerald ash borer", signs: { holes: "D-shaped holes", galleries: "wavy lines (galleries)" } },
+};
 // Where reports are saved. Fixed here (not a Cloudflare setting) because the setting kept pointing
 // at the public site repo. Must stay a PRIVATE repo; the relay refuses to save anywhere public.
 const REPORTS_REPO = "edafawd/pyinsect-reports-data";
@@ -44,6 +49,13 @@ const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
 const recent = new Map(), wrong = new Map();
 const reportCache = new Map();      // id → report JSON (reports never change)
 let listCache = { at: 0, ids: null };
+// map.json (in the private repo): one small line per report, for the reports map and check levels:
+//   { id, kind: "invasive" | "tree", name, area: { lat, lon } | null, month: "2026-10", level }
+// level: "unchecked" (just sent), "ai" (an AI thinks it's a match; not used yet),
+//        "verified" (a person on the team confirmed it), "not_match" (a person said no).
+const INDEX_PATH = "map.json", LEVELS = ["unchecked", "ai", "verified", "not_match"];
+const INDEX_CACHE_MS = 30000;       // the public map reads map.json at most every 30 s
+let indexCache = { at: 0, list: null };
 let privateCheck = { repo: null, at: 0 };   // last time REPORTS_REPO was confirmed private
 
 export default {
@@ -61,10 +73,11 @@ export default {
 // ---------- receiving reports from the website ----------
 
 async function submit(request, env) {
+  const url = new URL(request.url);
   const origin = request.headers.get("Origin");
   const cors = {
     "Access-Control-Allow-Origin": SITE_ORIGINS.includes(origin) ? origin : SITE_ORIGINS[0],
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -74,9 +87,31 @@ async function submit(request, env) {
   });
 
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (request.method === "GET" && url.pathname === "/map") {
+    // Public: every report with a rough area that hasn't been marked "not a match". Only what,
+    // where (the ~1 km square), when (the month), and how well it was checked. No ids or photos.
+    try {
+      const list = (await readIndexCached(env)).filter(e => e.area && e.level !== "not_match")
+        .map(e => ({ kind: e.kind, name: e.name, lat: e.area.lat, lon: e.area.lon, month: e.month, level: e.level }));
+      return reply(200, { reports: list });
+    } catch (e) {
+      return reply(502, { error: e.message });
+    }
+  }
+  if (request.method === "GET" && url.pathname === "/status") {
+    // A phone asks for the check levels of its own reports (it knows their ids). Up to 50 at a time.
+    const ids = (url.searchParams.get("ids") || "").split(",").filter(id => ID_RE.test(id)).slice(0, 50);
+    try {
+      const list = await readIndexCached(env), levels = {};
+      for (const id of ids) { const e = list.find(x => x.id === id); if (e) levels[id] = e.level; }
+      return reply(200, { levels });
+    } catch (e) {
+      return reply(502, { error: e.message });
+    }
+  }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 9, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 11, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   if (!SITE_ORIGINS.includes(origin)) return reply(403, { error: "Reports are only accepted from the Pyinsect site." });
@@ -104,15 +139,24 @@ async function submit(request, env) {
   try {
     // Photo first, so the reports page only lists a report once its photo exists
     await githubCreate(env, `reports/${report.id}.jpg`, photo, `Photo for ${report.name} report`);
-    await githubCreate(env, `reports/${report.id}.json`, toBase64(JSON.stringify(report, null, 1)), `Invasive species report: ${report.name}`);
+    await githubCreate(env, `reports/${report.id}.json`, toBase64(JSON.stringify(report, null, 1)),
+      `${report.kind === "tree" ? "Tree check report" : "Invasive species report"}: ${report.name}`);
   } catch (e) {
     return reply(502, { error: e.message });
   }
   listCache.at = 0;
+  // Add it to map.json. If that fails, the report is still saved (and gets added when it's checked).
+  try {
+    await updateIndex(env, list => { if (!list.some(e => e.id === report.id)) list.push(indexEntry(report, "unchecked")); });
+  } catch (e) {
+    console.log("map.json not updated:", e.message);
+  }
   return reply(201, { ok: true, id: report.id });
 }
 
-// Accepts only well-formed invasive reports and rebuilds them from known fields
+// Accepts only well-formed reports and rebuilds them from known fields. Two kinds:
+//   invasive (no kind): the bug model found an invasive species
+//   "tree": a photo from the tree check, with the signs the person said they saw
 function checkReport(body) {
   const r = body && body.report, photo = body && body.photo;
   if (!r || typeof r !== "object") return { error: "Missing report." };
@@ -123,13 +167,34 @@ function checkReport(body) {
   if (isNaN(when) || when > Date.now() + 3600000 || when < Date.now() - MAX_AGE_DAYS * 86400000) {
     return { error: "Report time is out of range." };
   }
-  if (!INVASIVE.has(r.species)) return { error: "Only invasive species are reported." };
+  // hasOwn: only trees really in the list (not hidden names like "__proto__" that every object has)
+  const tree = r.kind === "tree" && typeof r.tree === "string" && Object.hasOwn(TREE_CHECKS, r.tree) ? TREE_CHECKS[r.tree] : null;
+  if (r.kind === "tree") {
+    if (!tree) return { error: "Unknown tree check." };
+    if (!Array.isArray(r.signs) || r.signs.length > Object.keys(tree.signs).length
+        || !r.signs.every((s, i) => Object.hasOwn(tree.signs, s) && r.signs.indexOf(s) === i)) {
+      return { error: "Bad list of signs." };
+    }
+  } else if (r.kind !== undefined) {
+    return { error: "Unknown kind of report." };
+  } else if (!INVASIVE.has(r.species)) {
+    return { error: "Only invasive species are reported." };
+  }
   if (typeof r.timestamp !== "string" || !TIMESTAMP_RE.test(r.timestamp)) return { error: "Bad timestamp." };
   const pct = v => typeof v === "number" && v >= 0 && v <= 100;
-  if (!pct(r.confidence)) return { error: "Bad confidence." };
-  if (!Array.isArray(r.top3) || r.top3.length < 1 || r.top3.length > 3
-      || !r.top3.every(t => t && SPECIES_RE.test(t.species) && pct(t.confidence))) {
-    return { error: "Bad top-3 list." };
+  if (!tree && !pct(r.confidence)) return { error: "Bad confidence." };
+  // Tree reports may send the bug model's guesses too (as extra help for the team), or none
+  const top3Ok = Array.isArray(r.top3) && r.top3.length <= 3 && (tree || r.top3.length >= 1)
+    && r.top3.every(t => t && SPECIES_RE.test(t.species) && pct(t.confidence));
+  if (!top3Ok && !(tree && r.top3 === undefined)) return { error: "Bad top-3 list." };
+
+  // Rough area for the reports map (optional). Rounded to the ~1 km grid again here, so even a
+  // changed site can't save an exact spot.
+  let area = null;
+  if (r.area !== undefined && r.area !== null) {
+    const { lat, lon } = r.area || {};
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return { error: "Bad area." };
+    area = roughArea(lat, lon);
   }
 
   if (typeof photo !== "string" || photo.length > MAX_PHOTO_BYTES * 4 / 3 + 4) return { error: "Photo missing or too large." };
@@ -145,6 +210,28 @@ function checkReport(body) {
     const t = typeof v === "string" ? v.replace(/[^\p{L}\p{N} '().,-]/gu, "").trim().slice(0, 60) : "";
     return t || niceName(species);
   };
+  const top3 = (r.top3 || []).map(t => ({ species: t.species, name: label(t.name, t.species), confidence: t.confidence }));
+  if (tree) {
+    // The name is made here, never taken from the site, so it's always one of these two
+    return {
+      photo,
+      report: {
+        id: r.id,
+        timestamp: r.timestamp,
+        kind: "tree",
+        tree: r.tree,
+        name: r.signs.length ? `Possible ${tree.pest} damage` : `${tree.tree} to check`,
+        signs: r.signs,
+        signs_text: r.signs.length ? r.signs.map(s => tree.signs[s]).join(", ") : "None. They were still worried and sent a photo.",
+        ...(area ? { area } : {}),
+        pest: tree.pest,
+        top3,
+        photo: `${r.id}.jpg`,
+        model: short(r.model, 40),
+        app_version: short(r.app_version, 20),
+      },
+    };
+  }
   return {
     photo,
     report: {
@@ -154,7 +241,8 @@ function checkReport(body) {
       name: label(r.name, r.species),
       scientific: label(r.scientific, r.species),
       confidence: r.confidence,
-      top3: r.top3.map(t => ({ species: t.species, name: label(t.name, t.species), confidence: t.confidence })),
+      top3,
+      ...(area ? { area } : {}),
       photo: `${r.id}.jpg`,
       model: short(r.model, 40),
       app_version: short(r.app_version, 20),
@@ -181,7 +269,33 @@ async function viewer(request, env, rest) {
   }
 
   try {
-    if (rest === "/api/reports") return json(200, await latestReports(env));
+    if (rest === "/api/reports") {
+      // The newest reports, plus each one's check level from map.json
+      const data = await latestReports(env), list = (await readIndex(env)).list;
+      data.levels = Object.fromEntries(data.reports.map(r => [r.id, list.find(e => e.id === r.id)?.level || "unchecked"]));
+      return json(200, data);
+    }
+    // A team member checked a report: { level: "verified" | "not_match" | "unchecked" }
+    const check = rest.match(/^\/api\/check\/([0-9a-f-]{1,40})$/);
+    if (check && request.method === "POST") {
+      const id = check[1];
+      let level;
+      try { level = (await request.json()).level; } catch { return json(400, { error: "Not valid JSON." }); }
+      if (!ID_RE.test(id) || !["verified", "not_match", "unchecked"].includes(level)) return json(400, { error: "Bad check." });
+      // Reports sent before map.json existed aren't in it yet: add them from the saved report
+      let saved = null;
+      if (!(await readIndex(env)).list.some(e => e.id === id)) {
+        const res = await githubRead(env, `reports/${id}.json`);
+        if (!res) return json(404, { error: "No such report." });
+        saved = await res.json();
+      }
+      await updateIndex(env, list => {
+        const e = list.find(x => x.id === id);
+        if (e) e.level = level;
+        else if (saved) list.push(indexEntry(saved, level));
+      });
+      return json(200, { ok: true, id, level });
+    }
     const photo = rest.match(/^\/api\/photo\/([0-9a-f-]{1,40})$/);
     if (photo && ID_RE.test(photo[1])) {
       const res = await githubRead(env, `reports/${photo[1]}.jpg`);
@@ -269,6 +383,43 @@ async function githubCreate(env, path, base64, message) {
   if (!res.ok) throw new Error(ghError(res.status));
 }
 
+// ---------- map.json: the list for the reports map and check levels ----------
+
+function indexEntry(report, level) {
+  return { id: report.id, kind: report.kind === "tree" ? "tree" : "invasive", name: report.name,
+    area: report.area || null, month: String(report.timestamp || report.id).replace(/^(\d{4})-?(\d{2}).*/, "$1-$2"), level };
+}
+
+// The list and its version (sha). GitHub needs the version to change the file, and refuses the
+// change if someone else changed it first, so two updates can't erase each other.
+async function readIndex(env) {
+  const res = await gh(env, `contents/${INDEX_PATH}`);
+  if (res.status === 404) return { list: [], sha: null };
+  if (!res.ok) throw new Error(ghError(res.status));
+  const file = await res.json();
+  const text = new TextDecoder().decode(Uint8Array.from(atob((file.content || "").replace(/\s/g, "")), c => c.charCodeAt(0)));
+  return { list: text.trim() ? JSON.parse(text) : [], sha: file.sha };
+}
+
+// Changes the list with change(list), then saves it. Tries again (up to 4 times) if someone else
+// changed it at the same moment.
+async function updateIndex(env, change) {
+  for (let tries = 0; ; tries++) {
+    const { list, sha } = await readIndex(env);
+    change(list);
+    const body = { message: "Update map.json", content: toBase64(JSON.stringify(list)), ...(sha ? { sha } : {}) };
+    const res = await gh(env, `contents/${INDEX_PATH}`, { method: "PUT", body: JSON.stringify(body) });
+    if (res.ok) { indexCache = { at: Date.now(), list }; return list; }
+    if ((res.status === 409 || res.status === 422) && tries < 3) continue;
+    throw new Error(ghError(res.status));
+  }
+}
+
+async function readIndexCached(env) {
+  if (!indexCache.list || Date.now() - indexCache.at > INDEX_CACHE_MS) indexCache = { at: Date.now(), list: (await readIndex(env)).list };
+  return indexCache.list;
+}
+
 // Raw file contents, or null if it doesn't exist
 async function githubRead(env, path) {
   const res = await gh(env, `contents/${path}`, { headers: { Accept: "application/vnd.github.raw" } });
@@ -278,6 +429,16 @@ async function githubRead(env, path) {
 }
 
 // ---------- helpers ----------
+
+// The middle of the ~1 km grid square around a spot. Must stay the same as roughArea in
+// assets/app.js (scripts/check.js compares them).
+const AREA_DEG = 0.01;   // 0.01° of latitude ≈ 1.1 km
+function roughArea(lat, lon) {
+  const row = Math.floor(lat / AREA_DEG), rowLat = (row + 0.5) * AREA_DEG;
+  const lonStep = AREA_DEG / Math.max(0.2, Math.cos(rowLat * Math.PI / 180));   // squares stay ~1 km wide
+  const col = Math.floor(lon / lonStep);
+  return { lat: +rowLat.toFixed(4), lon: +((col + 0.5) * lonStep).toFixed(4) };
+}
 
 // VIEW_PATH as typed in Cloudflare, tolerating spaces, slashes or a whole pasted link
 function viewWord(env) {
@@ -405,13 +566,23 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 .login label { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .aibox { margin: -8px 0 18px; }
 .aiwarn { color: var(--alert); font-weight: 600; }
+/* Check level and Verify / Not a match buttons */
+.checkbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.level { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.level.unchecked { color: var(--muted); }
+.level.verified { color: #1f7a45; }
+.level.not_match { color: var(--alert); }
+.level.ai { color: #2f6fb3; }
+.checkbar button { font: 600 13px var(--body); padding: 6px 12px; border-radius: 999px; cursor: pointer; border: 1.5px solid #1f7a45; background: transparent; color: inherit; }
+.checkbar button.no { border-color: var(--alert); }
+.checkbar button:disabled { opacity: .5; cursor: progress; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <span class="eyebrow">Pyinsect field reports · private</span>
-    <h1>Latest invasive find</h1>
+    <h1>Latest report</h1>
     <span id="status" class="status">Loading…</span>
   </header>
 
@@ -451,6 +622,39 @@ function when(iso) {
   return { ago: ago, full: d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) };
 }
 
+function apiPost(path, body) {
+  return fetch("api/" + path, { method: "POST", headers: { "X-Password": password || "", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+}
+var levels = {};   // report id -> check level, from the relay
+var LEVEL_TEXT = { unchecked: "Not checked yet", ai: "AI checked", verified: "Verified", not_match: "Not a match" };
+
+// The check level and the buttons to change it. Changing your mind? Tap the other button.
+function checkBar(r) {
+  var bar = el("div", "checkbar"), level = levels[r.id] || "unchecked";
+  bar.append(el("span", "level " + level, LEVEL_TEXT[level] || level));
+  function btn(text, cls, to) {
+    var b = el("button", cls, text); b.type = "button";
+    b.onclick = function (e) {
+      e.stopPropagation();
+      bar.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+      apiPost("check/" + r.id, { level: to }).then(function (res) {
+        if (res.status === 401) { showLogin("Wrong password."); return; }
+        if (!res.ok) throw new Error("Error " + res.status);
+        levels[r.id] = to; shownIds = ""; refresh();
+      }).catch(function (err) {
+        bar.querySelectorAll("button").forEach(function (x) { x.disabled = false; });
+        $("status").className = "status error"; $("status").textContent = "Couldn't save the check: " + err.message;
+      });
+    };
+    b.onkeydown = function (e) { e.stopPropagation(); };
+    bar.append(b);
+  }
+  if (level !== "verified") btn("Verify ✓", "yes", "verified");
+  if (level !== "not_match") btn("Not a match ✗", "no", "not_match");
+  if (level === "verified" || level === "not_match") btn("Undo", "", "unchecked");
+  return bar;
+}
+
 function api(path) {
   return fetch("api/" + path, { headers: { "X-Password": password || "" }, cache: path === "reports" ? "no-store" : "default" });
 }
@@ -469,19 +673,24 @@ function getPhoto(id) {
 }
 function photo(img, id) { getPhoto(id).then(function () { img.src = photoUrls[id]; }, function () {}); }
 
+// Tree check reports (kind "tree") have the signs the person saw instead of a confidence
+function isTree(r) { return r.kind === "tree"; }
+function detail(r) { return isTree(r) ? "Signs seen: " + (r.signs_text || "none") : Number(r.confidence).toFixed(1) + "% confidence"; }
+
 function hero(r) {
   var card = el("article", "hero"), img = el("img"), info = el("div", "info");
   img.alt = "Photo of the reported " + r.name; photo(img, r.id);
-  info.append(el("span", "flag", "Invasive"), el("p", "species", r.name || niceName(r.species)));
-  if (r.scientific && r.scientific !== r.name) info.append(el("span", "sci", r.scientific));
+  info.append(el("span", "flag", isTree(r) ? "Tree check" : "Invasive"), el("p", "species", r.name || niceName(r.species)));
+  if (isTree(r) && r.pest) info.append(el("span", "sci", "Looking for signs of the " + r.pest));
+  else if (r.scientific && r.scientific !== r.name) info.append(el("span", "sci", r.scientific));
   var w = when(r.timestamp), facts = el("dl", "facts");
-  [["Reported", w.ago + " · " + w.full], ["Confidence", Number(r.confidence).toFixed(1) + "%"], ["Model", r.model || "—"], ["Report", r.id]]
+  [["Reported", w.ago + " · " + w.full], isTree(r) ? ["Signs seen", r.signs_text || "none"] : ["Confidence", Number(r.confidence).toFixed(1) + "%"], ["Model", r.model || "—"], ["Report", r.id]]
     .forEach(function (kv) { facts.append(el("dt", null, kv[0]), el("dd", null, kv[1])); });
   var dd = el("dd"); dd.append(aiSpan(r.id));
   facts.append(el("dt", null, "AI check"), dd);
   info.append(facts);
   if (Array.isArray(r.top3) && r.top3.length) {
-    info.append(el("span", "eyebrow", "Model's top guesses"));
+    info.append(el("span", "eyebrow", isTree(r) ? "Bug model's guesses (only useful if a bug is in the photo)" : "Model's top guesses"));
     var alts = el("div", "alts");
     r.top3.forEach(function (a) {
       var row = el("div", "alt"), track = el("div", "track"), fill = el("div", "fill");
@@ -494,6 +703,7 @@ function hero(r) {
   img.tabIndex = 0; img.title = "Show the whole photo";
   img.onclick = function () { openViewer(r); };
   img.onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openViewer(r); } };
+  info.append(checkBar(r));
   card.append(img, info);
   return card;
 }
@@ -501,7 +711,7 @@ function hero(r) {
 function row(r) {
   var x = el("div", "row"), img = el("img"), what = el("div", "what");
   img.alt = ""; img.loading = "lazy"; photo(img, r.id);
-  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", Number(r.confidence).toFixed(1) + "% confidence · "), aiSpan(r.id));
+  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", detail(r) + " · "), aiSpan(r.id), checkBar(r));
   x.append(img, what, el("span", "when", when(r.timestamp).full));
   x.tabIndex = 0; x.setAttribute("role", "button"); x.title = "Show the whole photo";
   x.onclick = function () { openViewer(r); };
@@ -518,12 +728,13 @@ async function refresh() {
     var data = await res.json();
     if (!res.ok) throw new Error(data.error || ("Error " + res.status));
     $("login").hidden = true; $("logoutBox").hidden = false; $("aiBox").hidden = false;
-    var list = data.reports, ids = list.map(function (r) { return r.id; }).join();
+    levels = data.levels || {};
+    var list = data.reports, ids = list.map(function (r) { return r.id; }).join() + JSON.stringify(levels);
     lastList = list;
     if (ids !== shownIds) {
       shownIds = ids;
       var box = $("latest"); box.innerHTML = "";
-      if (!list.length) box.append(el("div", "empty", "No invasive insects have been reported yet. New reports appear here within seconds."));
+      if (!list.length) box.append(el("div", "empty", "No reports yet. New invasive finds and tree checks appear here within seconds."));
       else box.append(hero(list[0]));
       var earlier = $("earlier"); earlier.innerHTML = "";
       list.slice(1).forEach(function (r) { earlier.append(row(r)); });
@@ -580,9 +791,9 @@ function openViewer(r) {
   photo(img, r.id);
   var cap = $("viewerCaption"); cap.innerHTML = "";
   cap.append(el("strong", null, r.name || niceName(r.species)));
-  if (r.scientific && r.scientific !== r.name) cap.append(el("em", null, r.scientific));
+  if (!isTree(r) && r.scientific && r.scientific !== r.name) cap.append(el("em", null, r.scientific));
   var w = when(r.timestamp);
-  cap.append(el("span", null, Number(r.confidence).toFixed(1) + "% · " + w.full + " · " + (r.model || "")));
+  cap.append(el("span", null, detail(r) + " · " + w.full + " · " + (r.model || "")));
   var ai = aiSpan(r.id); if (ai.textContent) cap.append(ai);
   $("viewer").hidden = false;
   document.body.style.overflow = "hidden";

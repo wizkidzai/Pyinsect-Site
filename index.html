@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261010g">
+<link rel="stylesheet" href="assets/site.css?v=20261013e">
 </head>
 <body>
 <div class="wrap">
@@ -21,7 +21,9 @@
     <span id="status" class="status busy"><span class="dot"></span><span id="statusText">Loading model…</span></span>
   </header>
 
-  <section id="tray" class="tray" aria-label="Add photos">
+  <div id="choices" class="choices">
+  <section id="tray" class="tray" aria-labelledby="trayTitle">
+    <h2 id="trayTitle">📷 Report a bug or damage</h2>
     <p>Take a photo of an insect, drop photos here, or choose photos. Photos are identified on this device. When a photo shows an invasive species, a report with a reduced copy of the photo is sent to the Pyinsect team.</p>
     <div class="actions">
       <button id="openCamera" class="btn primary" type="button" disabled>
@@ -37,18 +39,117 @@
     <input id="captureInput" type="file" accept="image/*" capture="environment">
   </section>
 
+  <!-- Filled in from the tree settings (assets/trees/*.js) by assets/treecheck.js -->
+  <section id="treeStart" class="tray" aria-labelledby="treeStartTitle" hidden>
+    <h2 id="treeStartTitle"></h2>
+    <p id="treeStartText"></p>
+    <div class="actions">
+      <button id="startTreeCheck" class="btn primary" type="button">Start</button>
+    </div>
+  </section>
+  </div>
+
+  <section id="treeCheck" class="tree-check" aria-label="Tree check" hidden>
+    <div id="treeStep" class="tree-step"></div>
+    <div class="tree-nav">
+      <button id="treeBack" class="btn" type="button">Back</button>
+      <button id="treeStartOver" class="btn" type="button" hidden>Start over</button>
+      <button id="treeClose" class="btn" type="button">Close</button>
+    </div>
+  </section>
+
   <section id="camera" class="camera" aria-label="Camera" hidden>
     <div class="viewfinder">
       <video id="cameraVideo" playsinline muted autoplay></video>
       <div id="cameraFlash" class="flash"></div>
+      <div id="focusRing" class="focus-ring" hidden></div>
       <p id="cameraMsg" class="camera-msg" hidden></p>
     </div>
+    <div id="zoomBar" class="zoom-bar" hidden>
+      <label for="zoom">Zoom</label>
+      <input id="zoom" type="range" min="1" max="4" step="0.1" value="1">
+      <output id="zoomValue" for="zoom">1×</output>
+    </div>
+    <label class="area-toggle"><input class="area-box" type="checkbox" checked> 📍 Add my rough area to my report (about 1 km)</label>
     <div class="camera-bar">
       <button id="closeCamera" class="btn" type="button">Close</button>
       <button id="shutter" class="shutter" type="button" aria-label="Take photo" disabled></button>
       <button id="switchCamera" class="btn" type="button" hidden>Switch camera</button>
       <button id="useCameraApp" class="btn" type="button" hidden>Use camera app</button>
     </div>
+  </section>
+
+  <section id="crop" class="crop" aria-label="Zoom in on the bug" hidden>
+    <p class="hint">Drag the box or its corners (or pinch) around the bug or damage. Or just tap <strong>Check it</strong> to check the whole photo.</p>
+    <div id="cropStage" class="crop-stage">
+      <img id="cropImg" alt="Your photo">
+      <div id="cropBox" class="crop-box" tabindex="0" role="group" aria-label="Zoom box. Arrow keys move it. Plus and minus make it bigger or smaller.">
+        <span class="handle" data-edge="nw"></span><span class="handle" data-edge="ne"></span>
+        <span class="handle" data-edge="sw"></span><span class="handle" data-edge="se"></span>
+      </div>
+    </div>
+    <label class="area-toggle"><input class="area-box" type="checkbox" checked> 📍 Add my rough area to my report (about 1 km)</label>
+    <div class="crop-bar">
+      <button id="cropCancel" class="btn" type="button">Cancel</button>
+      <button id="cropRetake" class="btn" type="button">Retake</button>
+      <button id="cropWhole" class="btn" type="button">Whole photo</button>
+      <button id="checkIt" class="btn primary" type="button" disabled>Check it</button>
+    </div>
+  </section>
+
+  <section class="ledger reports-map" id="reportsMapSection" aria-labelledby="reportsMapTitle">
+    <div class="ledger-head">
+      <h2 id="reportsMapTitle">🗺️ Reports map</h2>
+    </div>
+    <p class="hint">Invasive bugs and tree damage reported by everyone, in squares about 1 km wide. No photos and no exact spots are ever shown.</p>
+    <ul class="map-key" aria-label="What the colors mean">
+      <li><span class="swatch" style="background:#1f8a4c"></span>Verified: a person on our team checked it</li>
+      <li><span class="swatch" style="background:#2f6fb3"></span>AI checked: an AI thinks it's a match</li>
+      <li><span class="swatch" style="background:#8a8f8c"></span>Not checked yet</li>
+      <li><span class="swatch mine"></span>Your reports (only you see these)</li>
+    </ul>
+    <div class="actions">
+      <button id="showReportsMap" class="btn" type="button">Show the map</button>
+      <span id="reportsMapMsg" class="muted" role="status"></span>
+    </div>
+    <div id="reportsMap" class="catch-map reports-map-box" hidden></div>
+  </section>
+
+  <section class="game" id="game" aria-label="Innvadex game">
+    <div class="ledger-head">
+      <h2>Innvadex</h2>
+      <span class="game-score"><span id="gameRank" class="status"></span> <span id="gamePoints" class="status">0 points</span> <span id="gameCoins" class="status"></span> <span id="gameProgress" class="status"></span> <span id="gameProtector" class="status"></span></span>
+    </div>
+    <div id="daily" class="daily"><span class="daily-label">📅 Today's challenge</span> <strong id="dailyText"></strong> <span id="dailyState" class="daily-state"></span></div>
+    <div class="game-bar">
+      <div class="game-tabs" role="tablist">
+        <button class="tab" type="button" role="tab" data-tab="dex" aria-selected="true">My Innvadex</button>
+        <button class="tab" type="button" role="tab" data-tab="badges" aria-selected="false">Badges</button>
+        <button class="tab" type="button" role="tab" data-tab="battle" aria-selected="false">Battle</button>
+        <button class="tab" type="button" role="tab" data-tab="quiz" aria-selected="false">Quiz</button>
+        <button class="tab" type="button" role="tab" data-tab="shop" aria-selected="false">Shop</button>
+        <button class="tab" type="button" role="tab" data-tab="map" aria-selected="false">Map</button>
+        <button class="tab" type="button" role="tab" data-tab="learn" aria-selected="false">Learn about species</button>
+      </div>
+      <span class="actions">
+        <button id="muteBtn" class="btn" type="button" aria-pressed="false">🔊 Sound on</button>
+        <button id="howToPlay" class="btn" type="button">How to play</button>
+      </span>
+    </div>
+    <div id="tab-dex" role="tabpanel"><div id="dexGrid" class="dex-grid"></div></div>
+    <div id="tab-badges" role="tabpanel" hidden><div id="badgeList" class="badge-list"></div></div>
+    <div id="tab-battle" role="tabpanel" hidden><div id="battleList" class="battle-list"></div></div>
+    <div id="tab-quiz" role="tabpanel" hidden><div id="quizBox" class="quiz"></div></div>
+    <div id="tab-shop" role="tabpanel" hidden><div id="shopList" class="battle-list"></div></div>
+    <div id="tab-map" role="tabpanel" hidden>
+      <div class="map-panel">
+        <label class="map-toggle"><input id="mapToggle" type="checkbox"> Save where I catch bugs</label>
+        <p class="hint">Off at first. When it's on, your browser asks to use your location. Spots are rounded to about a city block and saved only on this device. They are never sent anywhere.</p>
+        <p id="mapCount" class="muted"></p>
+        <div id="catchMap" class="catch-map" hidden></div>
+      </div>
+    </div>
+    <div id="tab-learn" role="tabpanel" hidden><div id="learnList" class="learn-list"></div></div>
   </section>
 
   <details class="reporting" id="reporting">
@@ -64,7 +165,7 @@
       <h2>Your reports</h2>
       <span id="mineCount" class="status"></span>
     </div>
-    <p class="hint">Invasive finds sent from this tab. Tap one to see the whole photo.</p>
+    <p class="hint">Reports sent from this phone. They stay here, even after you close the browser. Tap one to see its photo.</p>
     <div id="mine" class="rows"></div>
   </section>
 
@@ -85,11 +186,20 @@
   <div id="viewerCaption" class="caption"></div>
 </div>
 
+<div id="gameToast" class="game-toast" role="status" hidden></div>
+<div id="gamePopup" class="game-popup" role="dialog" aria-modal="true" aria-label="Innvadex" hidden>
+  <div id="gamePopupBox" class="game-popup-box"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.wasm.min.js"></script>
 <script src="assets/reports.js?v=20261010g"></script>
 <script src="assets/species.js?v=20261010g"></script>
 <script src="assets/models/pyinsect-2.8.js?v=20261010g"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
-<script src="assets/app.js?v=20261010g"></script>
+<script src="assets/app.js?v=20261013e"></script>
+<script src="assets/trees/ash.js?v=20261012l"></script>
+<script src="assets/treecheck.js?v=20261013e"></script>
+<script src="assets/reportsmap.js?v=20261013c"></script>
+<script src="assets/game.js?v=20261011c"></script>
 </body>
 </html>

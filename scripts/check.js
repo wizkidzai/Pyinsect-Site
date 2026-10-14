@@ -18,9 +18,10 @@ function report(name, problems, fix) {
   if (fix) console.log(`   How to fix: ${fix}`);
 }
 
-// Every file in the project, including new files not added to git yet (but not ignored ones)
+// Every file in the project, including new files not added to git yet (but not ignored ones).
+// Submodules (like skills/shared) show up as folders, so we skip anything that isn't a file.
 const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" })
-  .split("\n").filter(f => f && fs.existsSync(f));
+  .split("\n").filter(f => f && fs.existsSync(f) && fs.statSync(f).isFile());
 const strings = text => [...text.replace(/\/\/.*$/gm, "").matchAll(/"([^"]*)"/g)].map(m => m[1]);
 const listIn = (text, start) => {
   const i = text.indexOf(start);
@@ -57,6 +58,53 @@ const listIn = (text, start) => {
     "add the species to both lists (see rule 5 in AGENTS.md), or fix the size in the model settings file.");
 }
 
+// 2b. The tree checks match: each assets/trees/*.js file is in TREE_CHECKS in relay/worker.js, with
+// the same pest and the same question ids (the relay refuses reports with signs it doesn't know)
+{
+  const vm = require("vm");
+  const problems = [];
+  const worker = fs.readFileSync("relay/worker.js", "utf8");
+  const start = worker.indexOf("const TREE_CHECKS = ");
+  let relayTrees = {};
+  try { relayTrees = vm.runInNewContext("(" + worker.slice(start + 20, worker.indexOf("\n};", start) + 2) + ")"); }
+  catch { problems.push("couldn't read TREE_CHECKS in relay/worker.js"); }
+  for (const f of files.filter(f => /^assets\/trees\/.*\.js$/.test(f))) {
+    const sandbox = { window: {} };
+    try { vm.runInNewContext(fs.readFileSync(f, "utf8"), sandbox); }
+    catch (e) { problems.push(`${f}: ${e.message}`); continue; }
+    for (const t of sandbox.window.PYINSECT_TREES || []) {
+      const r = relayTrees[t.id];
+      if (!r) { problems.push(`"${t.id}" in ${f} is missing from TREE_CHECKS in relay/worker.js`); continue; }
+      if (r.pest !== t.pest) problems.push(`${f} says the pest is "${t.pest}", but relay/worker.js says "${r.pest}"`);
+      const ids = t.questions.map(q => q.id).sort().join(), relayIds = Object.keys(r.signs).sort().join();
+      if (ids !== relayIds) problems.push(`${f} has questions [${ids}], but relay/worker.js has signs [${relayIds}]`);
+    }
+  }
+  report("Tree checks match the relay", problems,
+    "make TREE_CHECKS in relay/worker.js match the tree settings file (see rule 5 in AGENTS.md). A grown-up then redeploys the relay.");
+}
+
+// 2c. The rough area grid (reports map) is the same on the site and the relay: both must round a
+// spot to the same ~1 km square, or the map would put reports in the wrong place
+{
+  const vm = require("vm");
+  const problems = [];
+  const load = f => {
+    const text = fs.readFileSync(f, "utf8"), deg = text.match(/AREA_DEG = ([\d.]+)/), at = text.indexOf("function roughArea(");
+    if (!deg || at < 0) { problems.push(`${f}: couldn't find AREA_DEG and roughArea`); return null; }
+    return vm.runInNewContext(`const AREA_DEG = ${deg[1]}; ${text.slice(at, text.indexOf("\n}\n", at) + 2)}; roughArea`);
+  };
+  const site = load("assets/app.js"), relay = load("relay/worker.js");
+  if (site && relay) {
+    for (const [lat, lon] of [[45.5231, -122.6765], [44.0521, -123.0868], [-33.8688, 151.2093], [0.004, 0.004], [89.99, 179.99], [-89.99, -179.99]]) {
+      const a = JSON.stringify(site(lat, lon)), b = JSON.stringify(relay(lat, lon));
+      if (a !== b) problems.push(`spot ${lat}, ${lon}: the site says ${a}, the relay says ${b}`);
+    }
+  }
+  report("Rough area grid matches the relay", problems,
+    "make roughArea and AREA_DEG in assets/app.js and relay/worker.js exactly the same. A grown-up then redeploys the relay.");
+}
+
 // 3. No secrets (this code is public)
 {
   const SECRET = new RegExp([
@@ -80,6 +128,8 @@ const listIn = (text, start) => {
   for (const f of files) {
     const size = fs.statSync(f).size, mb = (size / 1e6).toFixed(1);
     if (f.startsWith("reports/")) problems.push(`${f}: reports must stay in the private reports repo`);
+    // Small help photos for the tree check are allowed in assets/trees/ (reports never go there)
+    else if (/^assets\/trees\/[^/]+\.jpe?g$/i.test(f)) { if (size > 300e3) problems.push(`${f} is ${(size / 1e3).toFixed(0)} KB; help photos must be under 300 KB (make it smaller)`); }
     else if (/\.(jpe?g|heic|webp)$/i.test(f)) problems.push(`${f}: photos look like reports; don't save them here`);
     else if (f.startsWith("model/") ? size > 95e6 : size > 5e6) problems.push(`${f} is ${mb} MB, which is too big`);
   }
