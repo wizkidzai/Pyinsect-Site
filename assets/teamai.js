@@ -1,37 +1,21 @@
-// Team AI check switch (requirements.md: "Team AI check switch").
-// A hidden switch for our team: it only shows when the page is opened with ?team at the end of the
-// link, or when it's already on. When it's on, each photo card says "Verified by AI:" and what the
-// AI checker (assets/aidetect.js) thinks. It never stops a report: the checker sometimes calls real
-// photos AI-made (about 1 in 5 in our test), so a person should look too.
-// The checker is 172 MB, so it's only downloaded when the switch is on.
+// AI check for every photo (requirements.md: "Team AI check switch", changed to "on for everyone").
+// Each photo card says "Verified by AI:" and what the AI checker (assets/aidetect.js) thinks.
+// It never stops a report: the checker sometimes calls real photos AI-made (about 1 in 5 in our
+// test), so a person should look too.
+// The checker is 172 MB. It downloads with the first photo someone checks (not just for opening the
+// page), and the browser keeps it, so later visits are quick.
 // app.js calls window.teamAI.check(file, card) for every photo card.
 
 (() => {
-  const KEY = "pyinsect.teamAI";
   const HERE = document.currentScript?.src || location.href;   // where this file lives, to find aidetect.js
   const AI_MADE = 0.7;   // scores from 70% up count as AI-made (same as the reports page)
-  const isOn = () => { try { return localStorage.getItem(KEY) === "1"; } catch { return false; } };
-  const setOn = on => { try { localStorage.setItem(KEY, on ? "1" : "0"); } catch {} };
-  const showSwitch = new URLSearchParams(location.search).has("team") || isOn();
 
-  // ---------- the switch ----------
-  let note = null;
-  if (showSwitch) {
-    const box = document.createElement("label");
-    box.className = "team-ai";
-    const tick = document.createElement("input");
-    tick.type = "checkbox"; tick.checked = isOn();
-    note = document.createElement("span");
-    note.className = "muted";
-    box.append(tick, " Team: AI check ", note);
-    document.querySelector("header").append(box);
-    tick.onchange = () => {
-      setOn(tick.checked);
-      note.textContent = tick.checked ? "(on for new photos)" : "";
-      if (tick.checked) load().catch(() => {});
-    };
-    if (tick.checked) note.textContent = "(on)";
-  }
+  // A small line under the status that only shows while the checker downloads (or if it fails)
+  const note = document.createElement("span");
+  note.className = "team-ai muted";
+  note.hidden = true;
+  document.querySelector("header").append(note);
+  const say = text => { note.textContent = text; note.hidden = !text; };
 
   // ---------- loading the checker (only when the switch is on) ----------
   let ready = null;
@@ -44,9 +28,9 @@
         s.onload = ok;
         s.onerror = () => bad(new Error("the AI checker didn't load"));
         document.head.append(s);
-      }).then(() => AIDetect.load(pct => { if (note) note.textContent = `(downloading the AI checker… ${pct}%)`; }))
-        .then(() => { if (note) note.textContent = "(on)"; })
-        .catch(e => { ready = null; if (note) note.textContent = `(${e.message})`; throw e; });
+      }).then(() => AIDetect.load(pct => say(`AI check: downloading the AI checker… ${pct}% (only the first time)`)))
+        .then(() => say(""))
+        .catch(e => { ready = null; say(`AI check: ${e.message}`); throw e; });
     }
     return ready;
   }
@@ -65,7 +49,7 @@
   // ---------- checking a photo card ----------
   let queue = Promise.resolve();   // one photo at a time, so the page stays smooth
   function check(file, card) {
-    if (!isOn() || !file || !card) return;
+    if (!file || !card) return;
     const line = document.createElement("span");
     line.className = "team-ai-line muted";
     line.textContent = "Verified by AI: checking…";

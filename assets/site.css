@@ -265,8 +265,8 @@ input[type=file] { display: none; }
 .card .sent.ok { color: var(--accent); }
 .card .sent.bad { color: var(--alert); }
 .card .blurry { font-size: 14px; font-weight: 600; color: var(--alert); }
-/* Team AI check switch (assets/teamai.js) */
-.team-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+/* AI check on every photo card (assets/teamai.js) */
+.team-ai { font-size: 14px; }
 .card .team-ai-line { font-size: 14px; font-weight: 600; }
 .card .team-ai-line.ai-made { color: var(--alert); }
 .card .team-ai-line.real { color: var(--accent); }

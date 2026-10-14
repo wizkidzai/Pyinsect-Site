@@ -266,6 +266,9 @@ To add one, ask your AI helper to help you plan a new feature. It will use
 ## Team AI check switch
 
 - **Status:** Done
+- **Changed:** 2026-10-13, edafawd asked for the AI check to be **on for everyone**, with no switch.
+  Now every photo card says "Verified by AI: …". The checker (172 MB) downloads with the first photo
+  someone checks, not just for opening the page, and the browser keeps it for later visits.
 - **Asked by:** edafawd, 2026-10-13
 - **Who it's for:** Our team.
 - **Problem or need:** A way to turn on AI checking on the main page.
@@ -289,3 +292,5 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [x] Without `?team`, there's no switch and nothing extra downloads.
   - [x] With `?team`, tick the switch, add a photo, and the card says "Verified by AI: …".
   - [x] Reload the page with the switch ticked, and it's still on.
+  - [x] On for everyone: open the normal link (no `?team`), add a photo, and the card says "Verified by AI: …".
+  - [x] On for everyone: just opening the page doesn't download the AI checker.
