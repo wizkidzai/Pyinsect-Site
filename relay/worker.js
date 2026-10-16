@@ -7,7 +7,7 @@
 // Settings (Cloudflare → this worker → Settings → Variables and Secrets):
 //   GITHUB_TOKEN    Secret. Fine-grained token, Contents: Read and write on REPORTS_REPO below.
 //   (GITHUB_REPO is no longer used: the repo is fixed in the code, see REPORTS_REPO.)
-//   ALLOWED_ORIGIN  Text, e.g. https://edafawd.github.io
+//   (ALLOWED_ORIGIN is no longer used: the allowed sites are fixed in the code, see SITE_ORIGINS.)
 //   VIEW_PASSWORD   Secret. Password for the reports page.
 //   VIEW_PATH       Secret. The secret word in the reports page address (letters, digits, - and _).
 
@@ -33,6 +33,9 @@ const TREE_CHECKS = {
 // Where reports are saved. Fixed here (not a Cloudflare setting) because the setting kept pointing
 // at the public site repo. Must stay a PRIVATE repo; the relay refuses to save anywhere public.
 const REPORTS_REPO = "edafawd/pyinsect-reports-data";
+// Websites allowed to send reports. The site moved to wizkidzai.github.io (Oct 11 2026); the old
+// address stays on the list so reports still waiting on phones can go through.
+const SITE_ORIGINS = ["https://wizkidzai.github.io", "https://edafawd.github.io"];
 const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
 const MAX_AGE_DAYS = 60;            // reports can wait offline on a phone for a while
 const PER_IP_LIMIT = 30;            // reports per IP per hour (per Cloudflare server, best effort)
@@ -71,8 +74,9 @@ export default {
 
 async function submit(request, env) {
   const url = new URL(request.url);
+  const origin = request.headers.get("Origin");
   const cors = {
-    "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
+    "Access-Control-Allow-Origin": SITE_ORIGINS.includes(origin) ? origin : SITE_ORIGINS[0],
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -107,11 +111,10 @@ async function submit(request, env) {
   }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 10, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 11, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
-  const origin = request.headers.get("Origin");
-  if (env.ALLOWED_ORIGIN && origin !== env.ALLOWED_ORIGIN) return reply(403, { error: "Reports are only accepted from the Pyinsect site." });
+  if (!SITE_ORIGINS.includes(origin)) return reply(403, { error: "Reports are only accepted from the Pyinsect site." });
   if (!env.GITHUB_TOKEN) return reply(500, { error: "The relay isn't set up yet (GITHUB_TOKEN missing)." });
 
   const ip = request.headers.get("CF-Connecting-IP") || "?";
@@ -808,7 +811,7 @@ document.addEventListener("keydown", function (e) { if (e.key === "Escape") clos
 // Free AI detector (assets/aidetect.js on the Pyinsect site), always on. It runs here, in this browser,
 // on the saved photos, so visitors download nothing and can't skip it. 172 MB the first time per device.
 // The user chose plain "AI-made" / "Real" labels; the % is the detector's score (it does make mistakes).
-var SITE = "https://edafawd.github.io/Pyinsect-Site/", AI_SCORES = "pyinsect.aiscores";
+var SITE = "https://wizkidzai.github.io/Pyinsect-Site/", AI_SCORES = "pyinsect.aiscores";
 var aiOn = true, aiScores = {}, aiQueue = [], aiBusy = false, aiReady = null, lastList = [];
 try { aiScores = JSON.parse(localStorage.getItem(AI_SCORES) || "{}") || {}; } catch (e) {}
 
