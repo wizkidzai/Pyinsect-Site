@@ -435,3 +435,6 @@ input[type=file] { display: none; }
 .map-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 .map-panel p { margin: 0; }
 .catch-map { height: 340px; border-radius: 16px; overflow: hidden; }
+/* "Insect not in my list" / "Unable to determine" cards (Oregon model) */
+.card.unsure .name { color: var(--muted); }
+.card .unsure-note { font-size: 14px; color: var(--muted); }

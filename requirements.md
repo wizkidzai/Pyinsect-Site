@@ -294,3 +294,28 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [x] Reload the page with the switch ticked, and it's still on.
   - [x] On for everyone: open the normal link (no `?team`), add a photo, and the card says "Verified by AI: …".
   - [x] On for everyone: just opening the page doesn't download the AI checker.
+
+## Pyinsect 2.8 Oregon model
+
+- **Asked by:** edafawd, 2026-10-16
+- **Who it's for:** Everyone who uses the identifier.
+- **Problem or need:** A new, better model (Pyinsect 2.8 EAB Oregon) and its program ("executor v3")
+  should run on the website, and the website should give the same answers as that program.
+- **Why they have it:** The old model always picked one of its insects, even for a photo of something
+  it doesn't know. The new one can say when it doesn't know.
+- **Our idea:** Use the new model on the main page. Like the executor, the card can now say:
+  - "Insect not in my list" when the model picks "Other insect", or the photo doesn't look like any
+    insect it learned (a "fingerprint" check).
+  - "Unable to determine" when it's less than 50% sure.
+  - These two answers are never reported. Small photos (shorter side under 200 pixels) use a second
+    model made for small photos, which downloads only when needed.
+- **Other ideas we talked about:**
+  - Keep showing the best guess even when unsure: people might report insects that aren't there.
+- **User flow:**
+  1. Someone adds a photo on the main page.
+  2. The card shows the insect, or "Insect not in my list", or "Unable to determine" with the closest guesses.
+  3. If it's an invasive insect, it's reported like before.
+- **Done when:**
+  - [x] On 43 test photos (normal, small and not-insect pictures), the website and executor v3 give the same answer.
+  - [x] "Insect not in my list" and "Unable to determine" cards don't send a report.
+  - [ ] A grown-up redeployed the relay (version 12) before this was merged.

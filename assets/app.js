@@ -29,19 +29,7 @@ async function loadModel() {
   try {
     if (typeof ort === "undefined") throw new Error("the onnxruntime script did not load. Check your internet connection.");
     ort.env.wasm.numThreads = 1;
-    const res = await fetch(MODEL_URL);
-    if (!res.ok) throw new Error(`could not download the model (${res.status})`);
-    const size = Number(res.headers.get("content-length")) || MODEL.size;
-    const reader = res.body.getReader(), chunks = [];
-    let got = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value); got += value.length;
-      setStatus(`Loading model… ${Math.min(100, Math.round(got / size * 100))}%`, "busy");
-    }
-    const buf = new Uint8Array(got);
-    let off = 0; for (const c of chunks) { buf.set(c, off); off += c.length; }
+    const buf = await downloadModel(MODEL_URL, MODEL.size, "Loading model");
     setStatus("Starting model…", "busy");
     session = await ort.InferenceSession.create(buf, { executionProviders: ["wasm"] });
     setStatus(readyText(), "ready");
@@ -50,6 +38,46 @@ async function loadModel() {
     console.error(e);
     setStatus(`Model failed to load: ${e.message}`, "error");
   }
+}
+
+// Downloads a model file, showing how far along it is in the status line
+async function downloadModel(url, expectedSize, label) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`could not download the model (${res.status})`);
+  const size = Number(res.headers.get("content-length")) || expectedSize;
+  const reader = res.body.getReader(), chunks = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    setStatus(`${label}… ${Math.min(100, Math.round(got / size * 100))}%`, "busy");
+  }
+  const buf = new Uint8Array(got);
+  let off = 0; for (const c of chunks) { buf.set(c, off); off += c.length; }
+  return buf;
+}
+
+// The low-resolution model (models with a `lowres` setting): a copy trained on small photos.
+// Downloaded the first time a small photo comes along.
+let lowresSession = null;
+async function getLowresSession() {
+  if (!lowresSession) {
+    lowresSession = downloadModel(MODEL.lowres.url, MODEL.lowres.size, "Loading the small-photo model")
+      .then(buf => ort.InferenceSession.create(buf, { executionProviders: ["wasm"] }))
+      .catch(e => { lowresSession = null; throw e; });
+  }
+  return lowresSession;
+}
+
+// What the answer is, like the Oregon executor: "not_listed" (the model picked "Other insect", or the
+// photo is unlike every known insect), "unable" (less than minConfidence % sure), or "ok".
+// sim is null when there's no fingerprint check (old models, or the low-res model).
+function verdictFor(best, sim) {
+  if (MODEL.otherClass && best.species === MODEL.otherClass) return "not_listed";
+  if (sim != null && MODEL.notInListCutoff != null && sim < MODEL.notInListCutoff) return "not_listed";
+  if (MODEL.minConfidence && best.confidence < MODEL.minConfidence) return "unable";
+  return "ok";
 }
 
 // Pillow's BILINEAR resize weights for one axis (antialiased when shrinking), so this
@@ -72,6 +100,8 @@ function pilCoeffs(inSize, outSize, from, count) {
 }
 
 // Pillow-style bilinear resize (as above), ImageNet normalisation, CHW
+const roundHalfEven = v => { const f = Math.floor(v), d = v - f; return d > 0.5 || (d === 0.5 && f % 2) ? f + 1 : f; };
+
 function preprocess(bmp) {
   const { width: w, height: h } = bmp;
   const c = document.createElement("canvas");
@@ -85,7 +115,8 @@ function preprocess(bmp) {
     cx = pilCoeffs(w, 224, 0, 224); cy = pilCoeffs(h, 224, 0, 224);
   } else {
     const [nw, nh] = w < h ? [256, Math.trunc(h * 256 / w)] : [Math.trunc(w * 256 / h), 256];
-    const left = Math.trunc((nw - 224) / 2), top = Math.trunc((nh - 224) / 2);
+    // torchvision's CenterCrop rounds with Python's round() (.5 goes to the even number), not down
+    const left = roundHalfEven((nw - 224) / 2), top = roundHalfEven((nh - 224) / 2);
     cx = pilCoeffs(w, nw, left, 224); cy = pilCoeffs(h, nh, top, 224);
   }
 
@@ -464,7 +495,8 @@ function makeCard(file) {
   return card;
 }
 
-function fillCard(card, top3) {
+function fillCard(card, top3, verdict = "ok") {
+  if (verdict !== "ok") return fillUnsureCard(card, top3, verdict);
   const best = top3[0], invasive = INVASIVE.has(best.species);
   card.className = "card" + (invasive ? " invasive" : "");
   const info = card.querySelector(".info"), fileLine = info.querySelector(".file");
@@ -481,6 +513,29 @@ function fillCard(card, top3) {
   return invasive;
 }
 
+// "Insect not in my list" or "Unable to determine": no report, and the closest guesses as hints
+function fillUnsureCard(card, top3, verdict) {
+  card.className = "card unsure";
+  const info = card.querySelector(".info"), fileLine = info.querySelector(".file");
+  info.innerHTML = "";
+  const known = top3.filter(t => t.species !== MODEL.otherClass).slice(0, 2);
+  const alts = el("div", "alts");
+  for (const t of known) {
+    const row = el("div", "alt"), track = el("div", "track"), fill = el("div", "fill");
+    fill.style.width = `${t.confidence.toFixed(1)}%`; track.append(fill);
+    row.append(el("span", null, commonName(t.species)), track, el("span", "pct", `${t.confidence.toFixed(1)}%`));
+    alts.append(row);
+  }
+  const notListed = verdict === "not_listed";
+  info.append(
+    el("p", "name", notListed ? "Insect not in my list" : "Unable to determine"),
+    el("span", "unsure-note", notListed
+      ? "This doesn't look like any insect I know. Closest ones I know:"
+      : `I'm not sure enough (best guess ${top3[0].confidence.toFixed(0)}%). Maybe:`),
+    fileLine, alts);
+  return false;
+}
+
 function classify(file) {
   total++;
   $("count").textContent = `${total} photo${total === 1 ? "" : "s"}`;
@@ -489,8 +544,17 @@ function classify(file) {
     try {
       setStatus(`Analysing ${file.name}…`, "busy");
       const bmp = await createImageBitmap(file);
-      const out = await session.run({ [session.inputNames[0]]: preprocess(bmp) });
-      const probs = softmax(Array.from(out[session.outputNames[0]].data));
+      // The model gets the photo's raw colours, like Pillow in training and in the executor. Browsers
+      // otherwise convert photos with a colour profile (like iPhone "Display P3") first, which changes
+      // the answer. The report photo (bmp) keeps the normal colours.
+      const raw = await createImageBitmap(file, { colorSpaceConversion: "none" });
+      // Small photos go to the low-res model (when this model has one), like the Oregon executor
+      const small = MODEL.lowres && Math.min(raw.width, raw.height) < MODEL.lowres.smallPx;
+      const s = small ? await getLowresSession() : session;
+      const out = await s.run({ [s.inputNames[0]]: preprocess(raw) });
+      raw.close?.();
+      const probs = softmax(Array.from((out.logits || out[s.outputNames[0]]).data));
+      const sim = !small && out.sim ? out.sim.data[0] : null;   // fingerprint check (main model only)
       const top3 = [...probs.keys()].sort((a, b) => probs[b] - probs[a]).slice(0, 3)
         .map(i => ({ species: CLASS_NAMES[i] ?? `idx_${i}`, confidence: probs[i] * 100 }));
       if (file.tree) {
@@ -499,7 +563,8 @@ function classify(file) {
         setStatus(readyText(), "ready");
         return;
       }
-      const invasive = fillCard(card, top3);
+      const verdict = verdictFor(top3[0], sim);
+      const invasive = fillCard(card, top3, verdict);
       window.teamAI?.check(file, card);   // team AI check switch (assets/teamai.js)
       if (sharpness(bmp) < BLUR_THRESHOLD) {
         card.querySelector(".info .name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
@@ -512,7 +577,7 @@ function classify(file) {
           fileReport(buildReport(bmp, top3[0].species, top3[0].confidence, top3), card);
           window.Innvadex?.encounter(top3[0].species, card.querySelector("img").src);   // the game (assets/game.js)
         }
-      } else if (window.Innvadex) {
+      } else if (window.Innvadex && verdict === "ok") {
         // Not invasive: protector points in the game, but only for real (not AI-made) photos
         const ai = file.fromCamera ? { verdict: "camera" } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown" }));
         if (ai.verdict === "ai") window.Innvadex.fakePhoto();

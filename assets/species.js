@@ -2,6 +2,26 @@
 // Species without a widely used common name get their group name; the scientific name is
 // always shown next to it.
 const COMMON_NAMES = {
+  // Pyinsect 2.8 Oregon (merged look-alike classes, damage photos, and Other insect)
+  "agrilus_anxius_politus": "Bronze Birch Borer / Willow Gall Limb Borer",
+  "agrilus_planipennis_damage": "Emerald Ash Borer damage",
+  "argynnis_hydaspe_zerene": "Hydaspe Fritillary / Zerene Fritillary",
+  "bombus": "Bumble bee",
+  "buprestis_adjecta_intricata": "Jewel Beetles",
+  "cicindela_oregona_repanda_tranquebarica": "Western Tiger Beetle / Bronzed Tiger Beetle / Oblique-lined Tiger Beetle",
+  "colias_eurytheme_philodice": "Orange Sulphur / Clouded Sulphur",
+  "culex_pipiens_tarsalis": "Northern House Mosquito / Western Encephalitis Mosquito",
+  "dendroctonus_ponderosae_rufipennis": "Mountain Pine Beetle / Spruce Bark Beetle",
+  "drosophila_melanogaster_suzukii": "Common Fruit Fly / Spotted-winged Drosophila",
+  "malacosoma_californica_disstria": "Western Tent Caterpillar Moth / Forest Tent Caterpillar Moth",
+  "manduca_quinquemaculatus_sexta": "Five-spotted Hawk Moth / Carolina Sphinx",
+  "orgyia_pseudotsugata_vetusta": "Douglas-fir tussock moth / Western Tussock Moth",
+  "other_insect": "Other insect",
+  "papilio_polyxenes_zelicaon": "Black Swallowtail / Anise Swallowtail",
+  "polyphylla_crinita_decemlineata": "Long-haired / Ten-lined June Beetle",
+  "sitophilus_granarius_oryzae": "Wheat Weevil / Rice Weevil",
+  "tenebrio_molitor_obscurus": "Yellow Mealworm Beetle / Dark Mealworm",
+  "vespula_germanica_pensylvanica": "German Yellowjacket / Western Yellowjacket",
   "achroia_grisella": "Lesser Wax Moth",
   "actias_luna": "Luna Moth",
   "adalia_bipunctata": "Two-spotted Lady Beetle",

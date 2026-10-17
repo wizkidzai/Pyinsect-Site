@@ -18,6 +18,10 @@ const INVASIVE = new Set([
   "linepithema_humile", "lycorma_delicatula", "lymantria_dispar", "macrodactylus_subspinosus",
   "pieris_rapae", "polistes_dominula", "popillia_japonica", "solenopsis_invicta",
   "vespa_mandarinia", "xyleborus_monographus",
+  // Pyinsect 2.8 Oregon (Oct 16 2026)
+  "agrilus_planipennis_damage", "cydalima_perspectalis", "drosophila_melanogaster_suzukii",
+  "drosophila_suzukii", "ips_typographus", "lymantria_monacha", "operophtera_brumata",
+  "scolytus_multistriatus",
   // Older names (Pyinsect 2.7 and before), so reports still waiting on a phone go through
   "ambrosia_beetle", "argentine_ant", "asian_giant_hornet", "asian_lady_beetle",
   "asian_longhorned_beetle", "balsam_woolly_adelgid", "brown_marmorated_stink_bug",
@@ -111,7 +115,7 @@ async function submit(request, env) {
   }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 11, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 12, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   if (!SITE_ORIGINS.includes(origin)) return reply(403, { error: "Reports are only accepted from the Pyinsect site." });
