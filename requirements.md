@@ -319,3 +319,34 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [x] On 43 test photos (normal, small and not-insect pictures), the website and executor v3 give the same answer.
   - [x] "Insect not in my list" and "Unable to determine" cards don't send a report.
   - [ ] A grown-up redeployed the relay (version 12) before this was merged.
+
+## Infested tree alert (emerald ash borer damage)
+
+- **Status:** Building
+- **Asked by:** edafawd, 2026-10-20
+- **Who it's for:** People in Oregon with an ash tree, and our team, who looks at the reports.
+- **Problem or need:** When the AI sees emerald ash borer damage, the site called it "Invasive", like a
+  bug. But it's not a bug: it means a tree is already infested and someone must do something about it.
+- **Why they have it:** An infested ash tree can die in a few years, and dead ash trees break and fall.
+  The owner needs to know what to do, and the team needs to know about the tree right away.
+- **Our idea:**
+  - When the answer is "Emerald Ash Borer damage", the card says "⚠ Infested tree" (orange, not the red
+    "Invasive"), warns that the tree is infested and needs action, and lists tips on what to do.
+  - The report is sent right away as an "Infested tree" report. On the team's reports page it gets an
+    orange "Infested tree: take action" label, and a banner at the top counts them.
+  - In the ash tree check, if the AI sees the damage in the photo, the last step says "Warning: your ash
+    tree is infested" with the same tips, and the report is marked as an infested tree.
+  - The tips live in the tree settings file (`assets/trees/ash.js`), so they're easy to change.
+- **Other ideas we talked about:**
+  - Keep calling it "Invasive": that's wrong, damage isn't a bug, and the owner gets no tips.
+  - Ask before sending: the team should know about an infested tree right away.
+- **User flow:**
+  1. Someone adds a photo of damaged ash bark on the main page, or answers the ash tree check and takes a photo.
+  2. The AI finds emerald ash borer damage.
+  3. They see "Warning: your ash tree is infested" and tips on what to do.
+  4. The report goes to the team right away, labelled "Infested tree: take action".
+- **Done when:**
+  - [x] A damage photo on the main page shows "⚠ Infested tree" (not "Invasive"), the warning, and the tips.
+  - [x] Its report reaches the relay as an infested tree report and shows "Infested tree: take action" on the reports page.
+  - [x] In the tree check, a damage photo ends with the warning and tips; a healthy-bark photo still says "Report made, thank you".
+  - [ ] A grown-up redeployed the relay (version 13) before this was merged.

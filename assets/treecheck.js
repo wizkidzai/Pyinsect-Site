@@ -4,7 +4,8 @@
 //
 // Steps: "pick" (which tree, only when there's more than one) → one step per question →
 // "photo" (when they answer Yes, skip, or are still worried) or "healthy" (No to everything).
-// After the photo is sent, "thanks". app.js sends the report (buildTreeReport) and calls
+// After the photo is sent, "thanks", or "infested" when the AI saw the tree's damage in the photo
+// (a warning and tips on what to do). app.js sends the report (buildTreeReport) and calls
 // treeCheck.reported() when it's on its way.
 // Everything is wrapped in (() => { ... })() so its names don't clash with the other scripts.
 
@@ -86,10 +87,12 @@ function photoTag() {
   return { id: tree.id, signs: seen.map(q => q.id), name, signsText };
 }
 
-// app.js calls this once the tree check photo's report is on its way
-function reported() {
+// app.js calls this once the tree check photo's report is on its way. infested = the AI saw the
+// tree's damage in the photo.
+function reported(infested) {
   treeCheck.pending = null;
-  if (!$("treeCheck").hidden && treeCheck.steps.at(-1) !== "thanks") goTo("thanks");
+  const end = infested && treeCheck.tree?.infested ? "infested" : "thanks";
+  if (!$("treeCheck").hidden && !["thanks", "infested"].includes(treeCheck.steps.at(-1))) goTo(end);
 }
 
 // Real photos side by side, each with a short label, and the credit line their license asks for.
@@ -173,17 +176,25 @@ function showStep() {
     }
   }
 
-  if (step === "thanks") {
-    title.textContent = "Report made, thank you! 🙂";
-    box.append(el("p", null, `We're sending your photo to the Pyinsect team, and a person will look at it. ` +
-      `You can see it under "Your reports" further down this page.`));
+  if (step === "thanks" || step === "infested") {
+    if (step === "infested") {
+      // infestedBox (app.js) has the warning as its first line, so the title just says what happened
+      title.textContent = "We found a problem with your tree";
+      box.append(infestedBox(tree), el("p", null, `We're sending your photo to the Pyinsect team right away, ` +
+        `marked as an infested tree. You can see it under "Your reports" further down this page.`));
+    } else {
+      title.textContent = "Report made, thank you! 🙂";
+      box.append(el("p", null, `We're sending your photo to the Pyinsect team, and a person will look at it. ` +
+        `You can see it under "Your reports" further down this page.`));
+    }
     button("Check another tree", "primary", startOver);
     button("Done", "", closeTreeCheck);
     box.append(buttons);
   }
 
-  $("treeBack").hidden = step === "thanks";
-  $("treeStartOver").hidden = treeCheck.steps.length < 2 || step === "thanks";
+  const done = step === "thanks" || step === "infested";
+  $("treeBack").hidden = done;
+  $("treeStartOver").hidden = treeCheck.steps.length < 2 || done;
   if (!$("treeCheck").hidden && document.activeElement !== title) {
     title.focus({ preventScroll: true });
     $("treeCheck").scrollIntoView({ behavior: "smooth", block: "start" });

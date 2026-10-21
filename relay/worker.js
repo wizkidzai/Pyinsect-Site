@@ -34,6 +34,11 @@ const INVASIVE = new Set([
 const TREE_CHECKS = {
   ash: { tree: "Ash tree", pest: "emerald ash borer", signs: { holes: "D-shaped holes", galleries: "wavy lines (galleries)" } },
 };
+// Tree damage classes of the bug model → the tree they mean (a key of TREE_CHECKS). Finding one
+// means a tree is infested and someone must take action. Must match damageClass in assets/trees/*.js.
+const INFESTED = { agrilus_planipennis_damage: "ash" };
+// Infested tree reports and tree checks where the AI saw the damage: shown as "take action"
+const needsAction = r => r.kind === "infested" || r.infested === true;
 // Where reports are saved. Fixed here (not a Cloudflare setting) because the setting kept pointing
 // at the public site repo. Must stay a PRIVATE repo; the relay refuses to save anywhere public.
 const REPORTS_REPO = "edafawd/pyinsect-reports-data";
@@ -54,7 +59,7 @@ const recent = new Map(), wrong = new Map();
 const reportCache = new Map();      // id → report JSON (reports never change)
 let listCache = { at: 0, ids: null };
 // map.json (in the private repo): one small line per report, for the reports map and check levels:
-//   { id, kind: "invasive" | "tree", name, area: { lat, lon } | null, month: "2026-10", level }
+//   { id, kind: "invasive" | "tree" | "infested", name, area: { lat, lon } | null, month: "2026-10", level }
 // level: "unchecked" (just sent), "ai" (an AI thinks it's a match; not used yet),
 //        "verified" (a person on the team confirmed it), "not_match" (a person said no).
 const INDEX_PATH = "map.json", LEVELS = ["unchecked", "ai", "verified", "not_match"];
@@ -115,7 +120,7 @@ async function submit(request, env) {
   }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 12, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 13, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   if (!SITE_ORIGINS.includes(origin)) return reply(403, { error: "Reports are only accepted from the Pyinsect site." });
@@ -144,7 +149,7 @@ async function submit(request, env) {
     // Photo first, so the reports page only lists a report once its photo exists
     await githubCreate(env, `reports/${report.id}.jpg`, photo, `Photo for ${report.name} report`);
     await githubCreate(env, `reports/${report.id}.json`, toBase64(JSON.stringify(report, null, 1)),
-      `${report.kind === "tree" ? "Tree check report" : "Invasive species report"}: ${report.name}`);
+      `${needsAction(report) ? "Infested tree report" : report.kind === "tree" ? "Tree check report" : "Invasive species report"}: ${report.name}`);
   } catch (e) {
     return reply(502, { error: e.message });
   }
@@ -158,9 +163,11 @@ async function submit(request, env) {
   return reply(201, { ok: true, id: report.id });
 }
 
-// Accepts only well-formed reports and rebuilds them from known fields. Two kinds:
+// Accepts only well-formed reports and rebuilds them from known fields. Three kinds:
 //   invasive (no kind): the bug model found an invasive species
-//   "tree": a photo from the tree check, with the signs the person said they saw
+//   "tree": a photo from the tree check, with the signs the person said they saw (infested: true
+//           when the bug model also found that tree's damage in the photo)
+//   "infested": the bug model found tree damage (INFESTED), like emerald ash borer damage
 function checkReport(body) {
   const r = body && body.report, photo = body && body.photo;
   if (!r || typeof r !== "object") return { error: "Missing report." };
@@ -179,6 +186,9 @@ function checkReport(body) {
         || !r.signs.every((s, i) => Object.hasOwn(tree.signs, s) && r.signs.indexOf(s) === i)) {
       return { error: "Bad list of signs." };
     }
+  } else if (r.kind === "infested" || (r.kind === undefined && Object.hasOwn(INFESTED, r.species))) {
+    // (No kind: sent by an older page that still called the damage invasive)
+    if (typeof r.species !== "string" || !Object.hasOwn(INFESTED, r.species)) return { error: "Unknown tree damage." };
   } else if (r.kind !== undefined) {
     return { error: "Unknown kind of report." };
   } else if (!INVASIVE.has(r.species)) {
@@ -216,7 +226,9 @@ function checkReport(body) {
   };
   const top3 = (r.top3 || []).map(t => ({ species: t.species, name: label(t.name, t.species), confidence: t.confidence }));
   if (tree) {
-    // The name is made here, never taken from the site, so it's always one of these two
+    // Only believed when the bug model's top guess really is this tree's damage
+    const infested = r.infested === true && INFESTED[top3[0]?.species] === r.tree && top3[0].confidence >= 50;
+    // The name is made here, never taken from the site, so it's always one of these three
     return {
       photo,
       report: {
@@ -224,12 +236,35 @@ function checkReport(body) {
         timestamp: r.timestamp,
         kind: "tree",
         tree: r.tree,
-        name: r.signs.length ? `Possible ${tree.pest} damage` : `${tree.tree} to check`,
+        name: infested ? `Infested ${tree.tree.toLowerCase()}` : r.signs.length ? `Possible ${tree.pest} damage` : `${tree.tree} to check`,
+        ...(infested ? { infested: true } : {}),
         signs: r.signs,
         signs_text: r.signs.length ? r.signs.map(s => tree.signs[s]).join(", ") : "None. They were still worried and sent a photo.",
         ...(area ? { area } : {}),
         pest: tree.pest,
         top3,
+        photo: `${r.id}.jpg`,
+        model: short(r.model, 40),
+        app_version: short(r.app_version, 20),
+      },
+    };
+  }
+  if (Object.hasOwn(INFESTED, r.species)) {
+    const sick = TREE_CHECKS[INFESTED[r.species]];
+    return {
+      photo,
+      report: {
+        id: r.id,
+        timestamp: r.timestamp,
+        kind: "infested",
+        tree: INFESTED[r.species],
+        species: r.species,
+        name: `Infested ${sick.tree.toLowerCase()}`,
+        pest: sick.pest,
+        action: "Take action: this tree looks infested",
+        confidence: r.confidence,
+        top3,
+        ...(area ? { area } : {}),
         photo: `${r.id}.jpg`,
         model: short(r.model, 40),
         app_version: short(r.app_version, 20),
@@ -390,7 +425,7 @@ async function githubCreate(env, path, base64, message) {
 // ---------- map.json: the list for the reports map and check levels ----------
 
 function indexEntry(report, level) {
-  return { id: report.id, kind: report.kind === "tree" ? "tree" : "invasive", name: report.name,
+  return { id: report.id, kind: needsAction(report) ? "infested" : report.kind === "tree" ? "tree" : "invasive", name: report.name,
     area: report.area || null, month: String(report.timestamp || report.id).replace(/^(\d{4})-?(\d{2}).*/, "$1-$2"), level };
 }
 
@@ -487,6 +522,8 @@ const PAGE = `<!doctype html>
   --accent-soft: #e2ede3;
   --alert: #b3261e;
   --alert-soft: #fbe7e4;
+  --warn: #b45309;
+  --warn-soft: #fdf0e1;
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
@@ -495,6 +532,7 @@ const PAGE = `<!doctype html>
   :root {
     --bg: #121814; --surface: #1a221d; --ink: #e4ebe5; --muted: #9aa89e; --line: #2c3830;
     --accent: #7cc193; --accent-soft: #1f3226; --alert: #ff8a7a; --alert-soft: #3a1d1a;
+    --warn: #ffb35c; --warn-soft: #3a2a14;
     color-scheme: dark;
   }
 }
@@ -580,6 +618,13 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
 .checkbar button { font: 600 13px var(--body); padding: 6px 12px; border-radius: 999px; cursor: pointer; border: 1.5px solid #1f7a45; background: transparent; color: inherit; }
 .checkbar button.no { border-color: var(--alert); }
 .checkbar button:disabled { opacity: .5; cursor: progress; }
+/* Infested trees (tree damage found): a problem that needs action, in orange */
+.flag.infested { background: var(--warn); }
+.hero.infested { border-color: var(--warn); box-shadow: inset 5px 0 0 var(--warn); }
+.hero.infested .species { color: var(--warn); }
+.hero.infested .action { font-weight: 700; color: var(--warn); }
+.row .infested-tag { color: var(--warn); font-weight: 700; }
+.action-banner { margin: 0 0 18px; padding: 12px 16px; border-radius: 12px; background: var(--warn-soft); border-left: 5px solid var(--warn); color: var(--ink); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -599,6 +644,7 @@ h2 { font-family: var(--display); font-weight: 500; font-size: 19px; margin: 0; 
     <div class="actions"><button class="btn primary" type="submit">Open reports</button><span id="loginMsg" class="status error"></span></div>
   </form>
 
+  <div id="actionBanner" class="action-banner" role="status" hidden></div>
   <section id="latest"></section>
   <section class="ledger" id="tallySection" hidden><h2 id="tallyTitle">Species reported</h2><div class="tally" id="tally"></div></section>
   <section class="ledger" id="earlierSection" hidden><h2>Earlier reports</h2><div class="rows" id="earlier"></div></section>
@@ -679,13 +725,17 @@ function photo(img, id) { getPhoto(id).then(function () { img.src = photoUrls[id
 
 // Tree check reports (kind "tree") have the signs the person saw instead of a confidence
 function isTree(r) { return r.kind === "tree"; }
+// Infested tree reports, and tree checks where the AI saw the damage: someone must take action
+function needsAction(r) { return r.kind === "infested" || r.infested === true; }
 function detail(r) { return isTree(r) ? "Signs seen: " + (r.signs_text || "none") : Number(r.confidence).toFixed(1) + "% confidence"; }
 
 function hero(r) {
-  var card = el("article", "hero"), img = el("img"), info = el("div", "info");
+  var card = el("article", "hero" + (needsAction(r) ? " infested" : "")), img = el("img"), info = el("div", "info");
   img.alt = "Photo of the reported " + r.name; photo(img, r.id);
-  info.append(el("span", "flag", isTree(r) ? "Tree check" : "Invasive"), el("p", "species", r.name || niceName(r.species)));
-  if (isTree(r) && r.pest) info.append(el("span", "sci", "Looking for signs of the " + r.pest));
+  info.append(needsAction(r) ? el("span", "flag infested", "Infested tree: take action") : el("span", "flag", isTree(r) ? "Tree check" : "Invasive"),
+    el("p", "species", r.name || niceName(r.species)));
+  if (needsAction(r)) info.append(el("span", "action", "The AI found " + (r.pest || "pest") + " damage. This tree needs action soon."));
+  else if (isTree(r) && r.pest) info.append(el("span", "sci", "Looking for signs of the " + r.pest));
   else if (r.scientific && r.scientific !== r.name) info.append(el("span", "sci", r.scientific));
   var w = when(r.timestamp), facts = el("dl", "facts");
   [["Reported", w.ago + " · " + w.full], isTree(r) ? ["Signs seen", r.signs_text || "none"] : ["Confidence", Number(r.confidence).toFixed(1) + "%"], ["Model", r.model || "—"], ["Report", r.id]]
@@ -715,7 +765,8 @@ function hero(r) {
 function row(r) {
   var x = el("div", "row"), img = el("img"), what = el("div", "what");
   img.alt = ""; img.loading = "lazy"; photo(img, r.id);
-  what.append(el("strong", null, r.name || niceName(r.species)), el("span", "muted", detail(r) + " · "), aiSpan(r.id), checkBar(r));
+  what.append(el("strong", null, r.name || niceName(r.species)), ...(needsAction(r) ? [el("span", "infested-tag", "⚠ Take action · ")] : []),
+    el("span", "muted", detail(r) + " · "), aiSpan(r.id), checkBar(r));
   x.append(img, what, el("span", "when", when(r.timestamp).full));
   x.tabIndex = 0; x.setAttribute("role", "button"); x.title = "Show the whole photo";
   x.onclick = function () { openViewer(r); };
@@ -737,6 +788,10 @@ async function refresh() {
     lastList = list;
     if (ids !== shownIds) {
       shownIds = ids;
+      // Infested trees in the newest reports that nobody marked "not a match"
+      var sick = list.filter(function (r) { return needsAction(r) && levels[r.id] !== "not_match"; }).length;
+      $("actionBanner").textContent = "⚠ " + sick + " infested tree" + (sick === 1 ? "" : "s") + " reported. " + (sick === 1 ? "It needs" : "They need") + " action: look for the orange “Take action” labels below.";
+      $("actionBanner").hidden = !sick;
       var box = $("latest"); box.innerHTML = "";
       if (!list.length) box.append(el("div", "empty", "No reports yet. New invasive finds and tree checks appear here within seconds."));
       else box.append(hero(list[0]));
@@ -766,7 +821,7 @@ function showLogin(msg) {
   try { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); } catch (e) {}
   password = null; shownIds = "";
   ["latest", "earlier", "tally"].forEach(function (id) { $(id).innerHTML = ""; });
-  $("earlierSection").hidden = $("tallySection").hidden = $("logoutBox").hidden = $("aiBox").hidden = true;
+  $("earlierSection").hidden = $("tallySection").hidden = $("logoutBox").hidden = $("aiBox").hidden = $("actionBanner").hidden = true;
   $("login").hidden = false; $("loginMsg").textContent = msg || "";
   $("status").className = "status"; $("status").textContent = "Password needed";
   $("pw").focus();

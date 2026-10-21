@@ -148,4 +148,23 @@ window.PYINSECT_TREES.push({
       "every few months, especially in late spring and summer, when the beetles come out.",
   },
   worried: "Still worried? Send us a picture anyway",
+  // The bug model's class for photos of emerald ash borer damage. When the AI finds it (on the main
+  // page or in this tree check), the tree is infested: the card shows the warning and tips below, and
+  // the team gets an "Infested tree" report right away. Must match INFESTED in relay/worker.js.
+  damageClass: "agrilus_planipennis_damage",
+  infested: {
+    title: "Warning: your ash tree is infested",
+    text: "This looks like emerald ash borer damage. The beetles are eating the tree from the inside, " +
+      "and it can die in a few years. You must take action soon.",
+    tips: [
+      "Tell a grown-up who looks after the tree.",
+      "Don't move the tree's wood, branches, or firewood to another place. That's how the beetles spread.",
+      "Report it to the Oregon Invasive Species Hotline: 1-866-INVADER (1-866-468-2337) or the website below.",
+      "Ask a certified arborist (a tree doctor) to look at it. If the tree is still mostly healthy, " +
+        "a treatment can often save it.",
+      "If the tree is badly damaged, have a professional take it down. Dead ash trees break easily and can fall.",
+      "Tell neighbors with ash trees to check theirs too.",
+    ],
+    links: [{ text: "Oregon Invasive Species Hotline", url: "https://oregoninvasiveshotline.org/" }],
+  },
 });

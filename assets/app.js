@@ -212,12 +212,28 @@ function buildReport(bmp, species, confidence, top3) {
 
 // A photo from the tree check (assets/treecheck.js). tree = { id, signs, name, signsText }.
 // The relay makes its own name from the tree and signs; ours is only for this device.
-function buildTreeReport(bmp, tree, top3) {
+function buildTreeReport(bmp, tree, top3, infested) {
   const { id, timestamp } = reportIdAndTime();
   return {
     report: {
       id, timestamp, kind: "tree", tree: tree.id, signs: tree.signs, name: tree.name,
+      ...(infested ? { infested: true } : {}),   // the bug model found damage in the photo
       top3: reportTop3(top3),   // the bug model's guesses, as extra help for the team
+      photo: `${id}.jpg`, model: MODEL_NAME, app_version: APP_VERSION,
+    },
+    photo: reportPhoto(bmp),
+  };
+}
+
+// An infested tree (the bug model found tree damage, like emerald ash borer damage): not a bug, but
+// a tree that needs action. tree = the tree settings (assets/trees/*.js) whose damageClass it found.
+function buildInfestedReport(bmp, tree, top3) {
+  const { id, timestamp } = reportIdAndTime(), best = top3[0];
+  return {
+    report: {
+      id, timestamp, kind: "infested", tree: tree.id, species: best.species, name: `Infested ${tree.name}`,
+      confidence: Math.round(best.confidence * 100) / 100,
+      top3: reportTop3(top3),
       photo: `${id}.jpg`, model: MODEL_NAME, app_version: APP_VERSION,
     },
     photo: reportPhoto(bmp),
@@ -495,13 +511,31 @@ function makeCard(file) {
   return card;
 }
 
+// The tree settings (assets/trees/*.js) whose damage class this is, like emerald ash borer damage
+// for ash trees. null for bugs.
+const damagedTree = species => (window.PYINSECT_TREES || []).find(t => t.damageClass === species) || null;
+
+// The warning and what to do, for an infested tree (on photo cards and at the end of the tree check)
+function infestedBox(tree) {
+  const box = el("div", "infested-box"), list = el("ul");
+  for (const tip of tree.infested.tips) list.append(el("li", null, tip));
+  box.append(el("p", "infested-title", `⚠ ${tree.infested.title}`), el("p", null, tree.infested.text),
+    el("p", "infested-what", "What to do:"), list);
+  for (const l of tree.infested.links || []) {
+    const a = el("a", null, l.text); a.href = l.url; a.target = "_blank"; a.rel = "noopener";
+    const p = el("p"); p.append(a); box.append(p);
+  }
+  return box;
+}
+
 function fillCard(card, top3, verdict = "ok") {
   if (verdict !== "ok") return fillUnsureCard(card, top3, verdict);
-  const best = top3[0], invasive = INVASIVE.has(best.species);
-  card.className = "card" + (invasive ? " invasive" : "");
+  const best = top3[0], invasive = INVASIVE.has(best.species), sick = damagedTree(best.species);
+  card.className = "card" + (invasive ? " invasive" : sick ? " infested" : "");
   const info = card.querySelector(".info"), fileLine = info.querySelector(".file");
   info.innerHTML = "";
   if (invasive) info.append(el("span", "flag", "Invasive"));
+  if (sick) info.append(el("span", "flag infested", "⚠ Infested tree"));
   const alts = el("div", "alts");
   for (const t of top3) {
     const row = el("div", "alt"), track = el("div", "track"), fill = el("div", "fill");
@@ -510,6 +544,7 @@ function fillCard(card, top3, verdict = "ok") {
     alts.append(row);
   }
   info.append(el("p", "name", commonName(best.species)), ...(MODEL.scientific ? [el("span", "sci", sciName(best.species))] : []), fileLine, alts);
+  if (sick) info.append(infestedBox(sick));
   return invasive;
 }
 
@@ -558,22 +593,26 @@ function classify(file) {
       const top3 = [...probs.keys()].sort((a, b) => probs[b] - probs[a]).slice(0, 3)
         .map(i => ({ species: CLASS_NAMES[i] ?? `idx_${i}`, confidence: probs[i] * 100 }));
       if (file.tree) {
-        await treePhoto(file, bmp, top3, card);
+        await treePhoto(file, bmp, top3, card, sim);
         bmp.close?.();
         setStatus(readyText(), "ready");
         return;
       }
       const verdict = verdictFor(top3[0], sim);
       const invasive = fillCard(card, top3, verdict);
+      const infested = verdict === "ok" ? damagedTree(top3[0].species) : null;   // tree damage: not a bug, but a tree that needs action
       window.teamAI?.check(file, card);   // team AI check switch (assets/teamai.js)
       if (sharpness(bmp) < BLUR_THRESHOLD) {
         card.querySelector(".info .name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
       }
-      if (invasive) {
+      if (invasive || infested) {
         // Photos from the in-page camera come straight from the camera; uploads are checked for AI labels
         const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown", reasons: [] }));
         if (ai.verdict === "ai") { blockReport(card, ai); window.Innvadex?.fakePhoto(); }
-        else {
+        else if (infested) {
+          // Sent right away, so the team knows about the infested tree
+          fileReport(buildInfestedReport(bmp, infested, top3), card, "Infested tree: action needed");
+        } else {
           fileReport(buildReport(bmp, top3[0].species, top3[0].confidence, top3), card);
           window.Innvadex?.encounter(top3[0].species, card.querySelector("img").src);   // the game (assets/game.js)
         }
@@ -597,19 +636,25 @@ function classify(file) {
 // A photo from the tree check: always sent to the team, because the person asked us to look at it.
 // The bug model's guesses go along for the team but aren't shown here: on a photo of bark, it would
 // just name whichever bug looks closest, which would be confusing.
-async function treePhoto(file, bmp, top3, card) {
+// If the bug model is sure it sees this tree's damage (like emerald ash borer damage), the tree is
+// infested: the card and the tree check's last step warn and say what to do, and the report says so.
+async function treePhoto(file, bmp, top3, card, sim) {
   const tree = file.tree, info = card.querySelector(".info"), fileLine = info.querySelector(".file");
-  card.className = "card tree";
+  const sick = verdictFor(top3[0], sim) === "ok" ? damagedTree(top3[0].species) : null;
+  const infested = sick?.id === tree.id;
+  card.className = "card tree" + (infested ? " infested" : "");
   info.innerHTML = "";
-  info.append(el("span", "flag tree", "Tree check"), el("p", "name", tree.name), fileLine, el("p", "tree-signs", tree.signsText));
+  info.append(el("span", "flag tree", "Tree check"), ...(infested ? [el("span", "flag infested", "⚠ Infested tree")] : []),
+    el("p", "name", infested ? `Infested ${sick.name}` : tree.name), fileLine, el("p", "tree-signs", tree.signsText),
+    ...(infested ? [infestedBox(sick)] : []));
   window.teamAI?.check(file, card);   // team AI check switch (assets/teamai.js)
   if (sharpness(bmp) < BLUR_THRESHOLD) {
     info.querySelector(".name").after(el("span", "blurry", "Blurry photo: try to get a clearer image."));
   }
   const ai = file.fromCamera ? { verdict: "camera", reasons: [] } : await checkAI(file.original || file).catch(() => ({ verdict: "unknown", reasons: [] }));
   if (ai.verdict === "ai") { blockReport(card, ai); return; }
-  fileReport(buildTreeReport(bmp, tree, top3), card, tree.signsText);
-  window.treeCheck?.reported();
+  fileReport(buildTreeReport(bmp, tree, top3, infested), card, infested ? "Infested tree: action needed" : tree.signsText);
+  window.treeCheck?.reported(infested);
 }
 
 // While the tree check is waiting for its photo, new photos belong to it

@@ -1,6 +1,7 @@
 // Pyinsect 2.8 EAB Oregon (Oct 16 2026): model files, how photos are prepared for it, its classes (in
 // output order) and the species that get reported. Matches "Pyinsect model executor Oregon v3.py".
-// Keep `invasive` in sync with INVASIVE in relay/worker.js.
+// Keep `invasive` in sync with INVASIVE in relay/worker.js. Emerald ash borer damage isn't here on purpose:
+// it's a sick tree, not a bug, so it gets an "Infested tree" report instead (damageClass in assets/trees/ash.js).
 window.PYINSECT_MODEL = {
   name: "Pyinsect 2.8 Oregon",
   url: new URL("../../model/insect_model_2.8_oregon.onnx", document.currentScript.src).href,
@@ -93,7 +94,7 @@ window.PYINSECT_MODEL = {
     "xylocopa_sonorina", "xylocopa_virginica", "zale_lunata", "zootermopsis_angusticollis"
   ],
   invasive: [
-    "agrilus_planipennis", "agrilus_planipennis_damage", "anisandrus_dispar",
+    "agrilus_planipennis", "anisandrus_dispar",
     "anoplophora_glabripennis", "coptotermes_formosanus", "cydalima_perspectalis",
     "drosophila_melanogaster_suzukii", "exomala_orientalis", "halyomorpha_halys",
     "ips_typographus", "lycorma_delicatula", "lymantria_dispar", "lymantria_monacha",

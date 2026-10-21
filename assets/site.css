@@ -438,3 +438,18 @@ input[type=file] { display: none; }
 /* "Insect not in my list" / "Unable to determine" cards (Oregon model) */
 .card.unsure .name { color: var(--muted); }
 .card .unsure-note { font-size: 14px; color: var(--muted); }
+/* Infested tree (tree damage found, like emerald ash borer damage): a problem, but not a bug, so orange, not red */
+:root { --warn: #b45309; --warn-soft: rgba(180, 83, 9, .12); }
+@media (prefers-color-scheme: dark) { :root { --warn: #ffb35c; --warn-soft: rgba(255, 179, 92, .14); } }
+.flag.infested { background: var(--warn); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 2px 8px color-mix(in srgb, var(--warn) 35%, transparent); }
+@media (prefers-color-scheme: dark) { .flag.infested { color: #1f1405; } }
+.card.infested {
+  border-color: color-mix(in srgb, var(--warn) 50%, var(--glass-edge));
+  background: linear-gradient(135deg, var(--warn-soft), transparent 55%), var(--glass);
+}
+.card.infested .name { color: var(--warn); }
+.infested-box { border-left: 4px solid var(--warn); background: var(--warn-soft); border-radius: 12px; padding: 10px 14px; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.infested-box p { margin: 0; }
+.infested-box .infested-title { font-weight: 700; font-size: 16px; color: var(--warn); }
+.infested-box .infested-what { font-weight: 600; }
+.infested-box ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
