@@ -81,6 +81,203 @@ To add one, ask your AI helper to help you plan a new feature. It will use
   - [ ] Your rank goes up when you get enough points.
   - [ ] Buy a Super Net in the shop, and the next minigame has more time.
 
+## Innvadex version 4: animations, cutscenes, trainer card, and streaks
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** The game should feel more alive, like a real video game, with a story.
+- **Why it matters:** A story and fun effects keep people playing, so more invasive bugs get
+  found and reported.
+- **Our idea:**
+  - **Animations:** a jar catches the bug and wobbles, then confetti. Battle attacks lunge and
+    shake, damage numbers float up, and fainted bugs fall over. Confetti for wins, badges, and
+    rank-ups. Animations turn off for people whose device asks for less motion.
+  - **Cutscenes:** an intro story with Professor Hazel, a cutscene before and after each gym, and
+    an ending when you beat all 4 gyms. Every cutscene can be skipped, and the intro can be
+    watched again.
+  - **Trainer card:** pick a nickname (not your real name) and an avatar emoji. Saved only on
+    this device.
+  - **Play streak:** play on days in a row for bonus points and streak badges.
+- **Other ideas we talked about:** none yet.
+- **Done when:**
+  - [ ] The intro cutscene plays the first time, can be skipped, and can be watched again.
+  - [ ] Catching a bug shows the jar animation and confetti.
+  - [ ] Battle attacks shake the bug that got hit and show the damage.
+  - [ ] Gym battles have a cutscene before and after.
+  - [ ] Your nickname and avatar show up in battles.
+  - [ ] Playing two days in a row shows a 2-day streak.
+
+## Innvadex version 5: more cutscenes, more gyms, harder gyms
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want more story and a bigger challenge.
+- **Why it matters:** The story teaches how invasive bugs spread, and a long adventure keeps
+  people finding and reporting bugs.
+- **Our idea:**
+  - **New cutscenes:** first catch, first Legendary bug, every rank-up, and each new gym opening.
+  - **Edited cutscenes:** the intro now teaches how invasive bugs travel (firewood, shipping
+    crates, plants, and cars). Gym cutscenes show the leader's strongest bug, victory cutscenes
+    say where to go next, and the ending comes after you beat the Champion.
+  - **More gyms:** Siuslaw Coast, Columbia Gorge, Deschutes, and Crater Lake (8 gyms in all),
+    plus a final battle with Oregon Champion Juniper. Gyms are beaten in order.
+  - **Harder gyms:** bigger teams, stronger leader bugs (up to Lv 4 for the Champion), smarter
+    leaders, and tough leaders can heal a hurt bug once or twice.
+- **Other ideas we talked about:** none yet.
+- **Done when:**
+  - [ ] Catching your first bug plays the "first catch" cutscene.
+  - [ ] A gym stays locked until you beat the gym before it.
+  - [ ] Beating a gym plays a victory cutscene that says where to go next.
+  - [ ] A tough gym leader heals a hurt bug during a battle.
+  - [ ] Beating the Champion plays the ending.
+
+## Innvadex version 6: longer cutscenes, more ranks, more gyms
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want a bigger story and a longer adventure.
+- **Why it matters:** Longer cutscenes teach more about invasive bugs, and a longer adventure
+  keeps people finding and reporting them.
+- **Our idea:**
+  - **Longer cutscenes:** a new helper, Pip, a native western bumble bee. The intro is 13 slides,
+    each gym has 5 slides before (the place, the leader, their strongest bug, what to do if you
+    see one) and 6 after (badge, a real-world tip, where to go next). The ending is 8 slides.
+  - **More ranks:** 13 ranks, from Rookie to Guardian of Oregon (2500 points).
+  - **More gyms:** Umpqua River, Rogue-Siskiyou, Wallowa Canyon, and Malheur Mountain, for 12
+    gyms plus the Oregon Champion.
+- **Other ideas we talked about:** bug types, seasonal events, a Protector-dex, real-world
+  missions, a cutscene gallery, Spanish, French, and Hindi, and big-text mode. These are next.
+- **Done when:**
+  - [ ] The intro has Pip in it.
+  - [ ] The Battle tab lists 12 gyms and the Champion, in order.
+  - [ ] Gym cutscenes show the leader's strongest bug and a real-world tip.
+  - [ ] Reaching 25 points makes you a Bug Spotter.
+
+## Innvadex version 7: bug types, seasons, Protector-dex, missions, story gallery, big text
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want more ways to play, learn, and help in real life.
+- **Why it matters:** Missions and seasons connect the game to real forests, and big text makes
+  it easier for more people to play.
+- **Our idea:**
+  - **Bug types:** beetle, ant, wasp, moth & butterfly, true bug, and termite. Some types are
+    strong against others (1.5× damage), like wasps against moths.
+  - **Seasonal events:** each season, some groups of bugs give double points.
+  - **Protector-dex:** a collection of bugs you found that aren't invasive.
+  - **Real-world missions:** 8 things to do with a grown-up, like checking where firewood comes from.
+  - **Story gallery:** watch any cutscene you've unlocked again.
+  - **Big-text mode:** makes the game bigger and easier to read.
+- **Other ideas we talked about:** Spanish, French, and Hindi versions (next).
+- **Done when:**
+  - [ ] A wasp attacking a moth says "It's super effective!"
+  - [ ] The season banner shows the right season.
+  - [ ] A bug that isn't invasive shows up in the Protector-dex.
+  - [ ] Finishing a mission gives 10 points, once.
+  - [ ] The Story tab replays the intro.
+  - [ ] Big text makes the game bigger.
+
+## Innvadex in Spanish, French, and Hindi
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-12
+- **Who it's for:** People in Oregon (and anywhere) who read Spanish, French, or Hindi better than English.
+- **Problem:** The game was only in English.
+- **Why it matters:** More people can play, learn about invasive bugs, and report them.
+- **Our idea:** A language menu (🌐) in the Innvadex with English, Español, Français, and हिन्दी.
+  Every sentence in the game is translated in `assets/game-i18n.js`. Bug names and people's
+  names stay the same. The bug-photo part of the website is still English for now.
+- **Other ideas we talked about:** translating the whole website (maybe later).
+- **Done when:**
+  - [ ] Picking a language changes the whole game, including cutscenes and battles.
+  - [ ] The language is remembered after a reload.
+  - [ ] Someone who speaks each language has checked the translations.
+
+## Innvadex version 8: Team Tangle, new minigames, Bug Buddy, and more
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-16
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want more to do, more story, and a funny bad guy team (like Team Rocket).
+- **Why it matters:** Each new part teaches a real way invasive bugs spread, or how experts
+  stop them. Read-aloud helps kids who can't read yet.
+- **Our idea:**
+  - **Team Tangle:** a goofy villain team (Bramble, Thistle, and Squawk, an invasive European
+    starling) who spread bugs on purpose: in firewood, on cars, in shipping crates. You stop 4 of
+    their schemes in the Battle tab, and sometimes they ambush you after a catch. When they lose,
+    they shout "Team Tangle is tangled up agaaain!" They never really take your bugs.
+  - **Trap Defense:** bugs crawl toward the forest. Place sticky traps and purple prism traps
+    (real traps experts use for emerald ash borers) to stop 3 waves.
+  - **Where's the Bug?:** find the hidden invasive bug in a busy forest picture before time runs out.
+  - **Weekly Swarm Boss:** a giant bug swarm with lots of HP. Damage you do is saved, so you can
+    beat it over many battles during the week.
+  - **Bug Buddy:** pick a native bug (Oregon swallowtail, convergent lady beetle, or ground
+    beetle). It grows as you earn points, gives tips when you tap it, and cheers in battles.
+  - **Day and night:** at night the game gets dark with fireflies, and moths give double points.
+  - **Weather:** a new weather each day (sunny, rainy, windy, foggy). It makes some types
+    stronger in battles.
+  - **Read aloud:** the computer reads cutscenes out loud in the player's language.
+  - **Trainer outfits:** spend coins on hats and gear for your trainer.
+  - **Printable certificate:** after you beat the Champion, print a "Forest Protector" certificate.
+- **Other ideas we talked about:** real weather from the internet (we picked game weather so
+  nobody's location is needed).
+- **Done when:**
+  - [ ] Each Team Tangle scheme plays its cutscenes, and winning shows the "tangled up" ending.
+  - [ ] Trap Defense and Where's the Bug? can be won and lost, and give points.
+  - [ ] Swarm Boss damage is still there after a reload.
+  - [ ] The Bug Buddy grows when you earn points.
+  - [ ] Night mode shows after 8 PM, and the weather changes each day.
+  - [ ] Read aloud speaks the cutscene in the chosen language (when the device has that voice).
+  - [ ] A hat bought in the shop shows on the trainer card.
+  - [ ] The certificate prints with the player's nickname.
+
+## Innvadex version 9: more minigames
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-18
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** Players want more minigames.
+- **Why it matters:** Each game teaches something: the names of invasive bugs, and which bugs
+  belong here so we leave them be.
+- **Our idea:** 3 new games in the Minigames tab (5 in all):
+  - **Bug Match:** a memory game. Flip cards to find matching pairs of invasive bugs.
+  - **Invasive or Native?:** sort 10 bugs. Get 8 right to win.
+  - **Bug Pop:** bugs pop out of holes for 30 seconds. Tap invasive ones, but tapping a native
+    bug (like Pip's family) loses points.
+  - New badges for each game, and "Minigame Champ" for winning all 5.
+  - Fact cards for the 6 new bugs in the Pyinsect 2.8 Oregon model, so catching them works.
+    A photo of emerald ash borer damage counts as finding the ash borer.
+- **Done when:**
+  - [ ] Each new game can be won (and Invasive or Native? and Bug Pop can be lost).
+  - [ ] The first win each day gives 30 points, later wins 5.
+  - [ ] Every new bug in the Oregon model has a fact card.
+
+## Innvadex version 10: simpler game
+
+- **Status:** Building
+- **Asked by:** Aadit, 2026-10-19
+- **Who it's for:** Everyday people, kids or adults, who play the Innvadex game.
+- **Problem:** The game had too many tabs and things to do, so new players didn't know where to start.
+- **Why it matters:** The game should be very basic. The second you open it, you know what to do.
+- **Our idea:**
+  - **"What to do next" box** at the top of the game with one step and one button. For example:
+    take your first photo, do today's challenge, battle the next gym, or stop Team Tangle.
+  - **Today's minigame:** one of the 5 minigames each day, right under today's challenge.
+    The Minigames tab is gone.
+  - **Removed:** the Shop (items and outfits), Quiz, Map, Missions, streaks, and coins.
+  - **Where you caught it:** tap a caught bug to see "Caught near Beaverton on 10/19/2026". It
+    uses the rough area (about 1 km) that the photo part already asks for, and a list of Oregon
+    towns built into the game. Nothing extra is sent anywhere, and it's saved only on this device.
+  - How to play is now 5 short steps.
+- **Done when:**
+  - [ ] A brand-new player sees "Take a photo" right away.
+  - [ ] Today's minigame can be played from the daily box.
+  - [ ] A caught bug's card says where and when you caught it.
+
 ## Camera zoom and crop
 
 - **Status:** Building

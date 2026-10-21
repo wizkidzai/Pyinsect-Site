@@ -9,8 +9,8 @@
 <meta name="theme-color" content="#2f6b45">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="assets/site.css?v=20261016a">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css?v=20261021b">
 </head>
 <body>
 <div class="wrap">
@@ -24,7 +24,7 @@
   <div id="choices" class="choices">
   <section id="tray" class="tray" aria-labelledby="trayTitle">
     <h2 id="trayTitle">📷 Report a bug or damage</h2>
-    <p>Take a photo of an insect, drop photos here, or choose photos. Photos are identified on this device. When a photo shows an invasive species, a report with a reduced copy of the photo is sent to the Pyinsect team.</p>
+    <p>Take or choose a photo of a bug. We'll tell you what it is, right here on your device. If it's invasive, a report with a smaller copy of the photo goes to the Pyinsect team.</p>
     <div class="actions">
       <button id="openCamera" class="btn primary" type="button" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3Z"/><circle cx="12" cy="13" r="3.5"/></svg>
@@ -97,58 +97,57 @@
     </div>
   </section>
 
-  <section class="ledger reports-map" id="reportsMapSection" aria-labelledby="reportsMapTitle">
+
+  <section class="ledger">
     <div class="ledger-head">
-      <h2 id="reportsMapTitle">🗺️ Reports map</h2>
+      <h2>Results</h2>
+      <span id="count" class="status">0 photos</span>
     </div>
-    <p class="hint">Invasive bugs and tree damage reported by everyone, in squares about 1 km wide. No photos and no exact spots are ever shown.</p>
-    <ul class="map-key" aria-label="What the colors mean">
-      <li><span class="swatch" style="background:#1f8a4c"></span>Verified: a person on our team checked it</li>
-      <li><span class="swatch" style="background:#2f6fb3"></span>AI checked: an AI thinks it's a match</li>
-      <li><span class="swatch" style="background:#8a8f8c"></span>Not checked yet</li>
-      <li><span class="swatch mine"></span>Your reports (only you see these)</li>
-    </ul>
-    <div class="actions">
-      <button id="showReportsMap" class="btn" type="button">Show the map</button>
-      <span id="reportsMapMsg" class="muted" role="status"></span>
+    <div id="cards" class="cards">
+      <div id="empty" class="empty">No photos yet. Tap "Take photo" or "Select photos" above to get started. Each photo you add appears here with its top match and the next two guesses.</div>
     </div>
-    <div id="reportsMap" class="catch-map reports-map-box" hidden></div>
   </section>
 
   <section class="game" id="game" aria-label="Innvadex game">
-    <div class="ledger-head">
+    <div class="game-head">
       <h2>Innvadex</h2>
-      <span class="game-score"><span id="gameRank" class="status"></span> <span id="gamePoints" class="status">0 points</span> <span id="gameCoins" class="status"></span> <span id="gameProgress" class="status"></span> <span id="gameProtector" class="status"></span></span>
+      <span class="game-me"><button id="trainerBtn" class="status trainer-btn" type="button"></button> <button id="buddyBtn" class="status buddy-btn" type="button"></button></span>
     </div>
-    <div id="daily" class="daily"><span class="daily-label">📅 Today's challenge</span> <strong id="dailyText"></strong> <span id="dailyState" class="daily-state"></span></div>
+    <p class="game-stats"><span id="gameRank"></span> · <span id="gamePoints">0 points</span> · <span id="gameProgress"></span> · <span id="gameProtector"></span></p>
+    <div id="nextStep" class="next-step" aria-live="polite"></div>
+    <div class="today">
+      <div id="daily" class="today-row"><span class="daily-label">📅 <span data-i18n="Today's challenge">Today's challenge</span></span> <strong id="dailyText"></strong> <span id="dailyState" class="daily-state"></span></div>
+      <div class="today-row daily-game"><span class="daily-label">🎮 <span data-i18n="Today's minigame">Today's minigame</span></span> <strong id="dailyGameName"></strong> <span id="dailyGameState" class="daily-state"></span> <button id="dailyGameBtn" class="btn primary" type="button" data-i18n="Play!">Play!</button></div>
+    </div>
+    <details class="conditions"><summary id="conditionsText"></summary><p id="seasonText"></p><p id="weatherText"></p></details>
     <div class="game-bar">
       <div class="game-tabs" role="tablist">
-        <button class="tab" type="button" role="tab" data-tab="dex" aria-selected="true">My Innvadex</button>
-        <button class="tab" type="button" role="tab" data-tab="badges" aria-selected="false">Badges</button>
-        <button class="tab" type="button" role="tab" data-tab="battle" aria-selected="false">Battle</button>
-        <button class="tab" type="button" role="tab" data-tab="quiz" aria-selected="false">Quiz</button>
-        <button class="tab" type="button" role="tab" data-tab="shop" aria-selected="false">Shop</button>
-        <button class="tab" type="button" role="tab" data-tab="map" aria-selected="false">Map</button>
-        <button class="tab" type="button" role="tab" data-tab="learn" aria-selected="false">Learn about species</button>
+        <button class="tab" type="button" role="tab" data-tab="dex" aria-selected="true" data-i18n="My Innvadex">My Innvadex</button>
+        <button class="tab" type="button" role="tab" data-tab="badges" aria-selected="false" data-i18n="Badges">Badges</button>
+        <button class="tab" type="button" role="tab" data-tab="battle" aria-selected="false" data-i18n="Battle">Battle</button>
+        <button class="tab" type="button" role="tab" data-tab="protector" aria-selected="false" data-i18n="Protector-dex">Protector-dex</button>
+        <button class="tab" type="button" role="tab" data-tab="story" aria-selected="false" data-i18n="Story">Story</button>
+        <button class="tab" type="button" role="tab" data-tab="learn" aria-selected="false" data-i18n="Learn about species">Learn about species</button>
       </div>
       <span class="actions">
-        <button id="muteBtn" class="btn" type="button" aria-pressed="false">🔊 Sound on</button>
-        <button id="howToPlay" class="btn" type="button">How to play</button>
+        <button id="howToPlay" class="btn" type="button">❓ <span data-i18n="How to play">How to play</span></button>
+        <details class="settings">
+          <summary class="btn">⚙️ <span data-i18n="Settings">Settings</span></summary>
+          <div class="settings-menu">
+            <label class="lang-pick">🌐 <span class="visually-hidden" data-i18n="Language">Language</span> <select id="langSelect"></select></label>
+            <button id="bigTextBtn" class="btn" type="button" aria-pressed="false">🔠 <span data-i18n="Big text">Big text</span></button>
+            <button id="muteBtn" class="btn" type="button" aria-pressed="false">🔊 Sound on</button>
+            <button id="readAloudBtn" class="btn" type="button" aria-pressed="false">🗣️ <span data-i18n="Read aloud">Read aloud</span></button>
+            <button id="introBtn" class="btn" type="button">🎬 <span data-i18n="Watch intro">Watch intro</span></button>
+          </div>
+        </details>
       </span>
     </div>
     <div id="tab-dex" role="tabpanel"><div id="dexGrid" class="dex-grid"></div></div>
-    <div id="tab-badges" role="tabpanel" hidden><div id="badgeList" class="badge-list"></div></div>
+    <div id="tab-badges" role="tabpanel" hidden><div id="certBox" class="cert-box"></div><div id="badgeList" class="badge-list"></div></div>
     <div id="tab-battle" role="tabpanel" hidden><div id="battleList" class="battle-list"></div></div>
-    <div id="tab-quiz" role="tabpanel" hidden><div id="quizBox" class="quiz"></div></div>
-    <div id="tab-shop" role="tabpanel" hidden><div id="shopList" class="battle-list"></div></div>
-    <div id="tab-map" role="tabpanel" hidden>
-      <div class="map-panel">
-        <label class="map-toggle"><input id="mapToggle" type="checkbox"> Save where I catch bugs</label>
-        <p class="hint">Off at first. When it's on, your browser asks to use your location. Spots are rounded to about a city block and saved only on this device. They are never sent anywhere.</p>
-        <p id="mapCount" class="muted"></p>
-        <div id="catchMap" class="catch-map" hidden></div>
-      </div>
-    </div>
+    <div id="tab-protector" role="tabpanel" hidden><p id="protectorCount" class="muted"></p><div id="protectorList" class="dex-grid"></div></div>
+    <div id="tab-story" role="tabpanel" hidden><div id="storyList" class="story-list"></div></div>
     <div id="tab-learn" role="tabpanel" hidden><div id="learnList" class="learn-list"></div></div>
   </section>
 
@@ -169,14 +168,23 @@
     <div id="mine" class="rows"></div>
   </section>
 
-  <section class="ledger">
+
+  <section class="ledger reports-map" id="reportsMapSection" aria-labelledby="reportsMapTitle">
     <div class="ledger-head">
-      <h2>Results</h2>
-      <span id="count" class="status">0 photos</span>
+      <h2 id="reportsMapTitle">🗺️ Reports map</h2>
     </div>
-    <div id="cards" class="cards">
-      <div id="empty" class="empty">No photos yet. Tap "Take photo" or "Select photos" above to get started. Each photo you add appears here with its top match and the next two guesses.</div>
+    <p class="hint">Invasive bugs and tree damage reported by everyone, in squares about 1 km wide. No photos and no exact spots are ever shown.</p>
+    <ul class="map-key" aria-label="What the colors mean">
+      <li><span class="swatch" style="background:#1f8a4c"></span>Verified: a person on our team checked it</li>
+      <li><span class="swatch" style="background:#2f6fb3"></span>AI checked: an AI thinks it's a match</li>
+      <li><span class="swatch" style="background:#8a8f8c"></span>Not checked yet</li>
+      <li><span class="swatch mine"></span>Your reports (only you see these)</li>
+    </ul>
+    <div class="actions">
+      <button id="showReportsMap" class="btn" type="button">Show the map</button>
+      <span id="reportsMapMsg" class="muted" role="status"></span>
     </div>
+    <div id="reportsMap" class="catch-map reports-map-box" hidden></div>
   </section>
 </div>
 
@@ -197,10 +205,11 @@
 <script src="assets/models/pyinsect-2.8-oregon.js?v=20261016a"></script>
 <script src="assets/aicheck.js?v=20261010g"></script>
 <script src="assets/app.js?v=20261016a"></script>
-<script src="assets/teamai.js?v=20261013g"></script>
-<script src="assets/trees/ash.js?v=20261012l"></script>
-<script src="assets/treecheck.js?v=20261013e"></script>
-<script src="assets/reportsmap.js?v=20261013c"></script>
-<script src="assets/game.js?v=20261011c"></script>
+<script src="assets/teamai.js?v=20261021b"></script>
+<script src="assets/trees/ash.js?v=20261021b"></script>
+<script src="assets/treecheck.js?v=20261021b"></script>
+<script src="assets/reportsmap.js?v=20261021b"></script>
+<script src="assets/game-i18n.js?v=20261021b"></script>
+<script src="assets/game.js?v=20261021b"></script>
 </body>
 </html>
