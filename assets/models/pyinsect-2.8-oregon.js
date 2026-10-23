@@ -1,22 +1,23 @@
-// Pyinsect 2.8 EAB Oregon (Oct 16 2026): model files, how photos are prepared for it, its classes (in
-// output order) and the species that get reported. Matches "Pyinsect model executor Oregon v3.py".
+// Pyinsect 2.8 EAB Oregon "crop" (Oct 23 2026, trained on whole photos + insect crops): model files, how photos are prepared for it, its classes (in
+// output order) and the species that get reported. Matches "Pyinsect model executor Oregon v5.py"
+// with its insect finder off (the finder comes in a later change).
 // Keep `invasive` in sync with INVASIVE in relay/worker.js. Emerald ash borer damage isn't here on purpose:
 // it's a sick tree, not a bug, so it gets an "Infested tree" report instead (damageClass in assets/trees/ash.js).
 window.PYINSECT_MODEL = {
   name: "Pyinsect 2.8 Oregon",
-  url: new URL("../../model/insect_model_2.8_oregon.onnx", document.currentScript.src).href,
-  size: 23891545,
+  url: new URL("../../model/insect_model_2.8_oregon_crop.onnx", document.currentScript.src).href,
+  size: 23917145,
   resize: "crop",       // resize 256 + centre crop 224, like the executor's TRANSFORM
   scientific: true,     // class names are scientific names (show common + scientific)
   minConfidence: 50,    // below this % the answer is "Unable to determine"
   otherClass: "other_insect",   // if the model picks this, the answer is "Insect not in my list"
   // The model file also gives "sim": how close the photo is to the nearest known insect
   // (the .notinlist.pt fingerprints). Below this it's "Insect not in my list" (keeps 95% of real photos).
-  notInListCutoff: 0.5084267258644104,
+  notInListCutoff: 0.5028396248817444,
   // Small photos (shorter side under smallPx) use a copy of the model trained on low-resolution photos.
   // It's only downloaded when a small photo comes along.
   lowres: {
-    url: new URL("../../model/insect_model_2.8_oregon_lowres.onnx", document.currentScript.src).href,
+    url: new URL("../../model/insect_model_2.8_oregon_crop_lowres.onnx", document.currentScript.src).href,
     size: 17337060,
     smallPx: 200,
   },
