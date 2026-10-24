@@ -120,7 +120,7 @@ async function submit(request, env) {
   }
   if (request.method === "GET") {
     // Says whether the reports page is set up, never what its address or password is
-    return reply(200, { ok: true, service: "pyinsect-relay", version: 13, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
+    return reply(200, { ok: true, service: "pyinsect-relay", version: 14, reports_page: Boolean(viewWord(env) && env.VIEW_PASSWORD) });
   }
   if (request.method !== "POST") return reply(405, { error: "Use POST." });
   if (!SITE_ORIGINS.includes(origin)) return reply(403, { error: "Reports are only accepted from the Pyinsect site." });
@@ -870,7 +870,7 @@ document.addEventListener("keydown", function (e) { if (e.key === "Escape") clos
 // Free AI detector (assets/aidetect.js on the Pyinsect site), always on. It runs here, in this browser,
 // on the saved photos, so visitors download nothing and can't skip it. 172 MB the first time per device.
 // The user chose plain "AI-made" / "Real" labels; the % is the detector's score (it does make mistakes).
-var SITE = "https://wizkidzai.github.io/Pyinsect-Site/", AI_SCORES = "pyinsect.aiscores";
+var SITE = "https://wizkidzai.github.io/pyinsect/", AI_SCORES = "pyinsect.aiscores";
 var aiOn = true, aiScores = {}, aiQueue = [], aiBusy = false, aiReady = null, lastList = [];
 try { aiScores = JSON.parse(localStorage.getItem(AI_SCORES) || "{}") || {}; } catch (e) {}
 

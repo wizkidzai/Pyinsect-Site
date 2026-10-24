@@ -43,8 +43,8 @@ Kids in elementary and middle school. Please:
 
 The shared skills read this section, so keep it up to date.
 
-- **Repo:** `wizkidzai/Pyinsect-Site`
-- **Live site:** https://wizkidzai.github.io/Pyinsect-Site/
+- **Repo:** `wizkidzai/pyinsect` (renamed from `Pyinsect-Site` in Oct 2026)
+- **Live site:** https://wizkidzai.github.io/pyinsect/
 - **Extra tools:** Python 3 (`python3 --version`, Windows: `python --version`) to run the site,
   and Node.js (`node --version`) to check the code.
 - **Run it:** it's a plain website with no build step. Run `python3 -m http.server 8000`
