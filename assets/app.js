@@ -528,6 +528,15 @@ function infestedBox(tree) {
   return box;
 }
 
+// A name in the "top 3" list: the scientific name in italics (models with scientific names), else
+// the common name. "Other insect" isn't a species, so it keeps its plain name.
+function altName(species) {
+  if (!MODEL.scientific || species === MODEL.otherClass) return el("span", null, commonName(species));
+  const name = el("span", "alt-sci", sciName(species));
+  name.title = commonName(species);   // the common name shows when you point at it
+  return name;
+}
+
 function fillCard(card, top3, verdict = "ok") {
   if (verdict !== "ok") return fillUnsureCard(card, top3, verdict);
   const best = top3[0], invasive = INVASIVE.has(best.species), sick = damagedTree(best.species);
@@ -540,7 +549,7 @@ function fillCard(card, top3, verdict = "ok") {
   for (const t of top3) {
     const row = el("div", "alt"), track = el("div", "track"), fill = el("div", "fill");
     fill.style.width = `${t.confidence.toFixed(1)}%`; track.append(fill);
-    row.append(el("span", null, commonName(t.species)), track, el("span", "pct", `${t.confidence.toFixed(1)}%`));
+    row.append(altName(t.species), track, el("span", "pct", `${t.confidence.toFixed(1)}%`));
     alts.append(row);
   }
   info.append(el("p", "name", commonName(best.species)), ...(MODEL.scientific ? [el("span", "sci", sciName(best.species))] : []), fileLine, alts);
@@ -558,7 +567,7 @@ function fillUnsureCard(card, top3, verdict) {
   for (const t of known) {
     const row = el("div", "alt"), track = el("div", "track"), fill = el("div", "fill");
     fill.style.width = `${t.confidence.toFixed(1)}%`; track.append(fill);
-    row.append(el("span", null, commonName(t.species)), track, el("span", "pct", `${t.confidence.toFixed(1)}%`));
+    row.append(altName(t.species), track, el("span", "pct", `${t.confidence.toFixed(1)}%`));
     alts.append(row);
   }
   const notListed = verdict === "not_listed";
