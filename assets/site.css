@@ -453,3 +453,5 @@ input[type=file] { display: none; }
 .infested-box .infested-title { font-weight: 700; font-size: 16px; color: var(--warn); }
 .infested-box .infested-what { font-weight: 600; }
 .infested-box ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+/* Scientific names in the top-3 list */
+.alt .alt-sci { font-style: italic; overflow-wrap: anywhere; }
